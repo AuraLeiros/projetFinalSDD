@@ -2,6 +2,8 @@
 #define HACHAGE_H
 
 #include <stdio.h>
+#include <stdint.h>
+#include <string.h>
 #include <stdlib.h>
 
 #include "macros.h"
@@ -9,7 +11,7 @@
 typedef struct hashentry {
     char* key;
     void* value;
-} HashEntry
+} HashEntry;
 
 typedef struct hashmap {
     int size;
