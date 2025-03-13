@@ -92,3 +92,62 @@ int hashmap_insert(HashMap* map, const char* key, void* value){
     return EXIT_FAILURE;
     
 }
+
+void* hashmap_get(HashMap* map, const char* key) {
+    //on part du principe que cet element est forcement dans la table?
+    if (!map || !key){
+        fprintf(stderr, "Erreur dans les parametres\n");
+        return NULL;
+    }
+
+    unsigned long hash = simple_hash(key);
+    while (hash <= TABLE_SIZE) {
+        if (map->table[hash].key == key) {
+            return map->table[hash].value;
+        }
+
+        hash++;
+    }
+
+    fprintf(stderr, "L'element n'a pas pu etre trouve dans la table de hachage\n");
+
+    return NULL;
+
+}
+
+int hashmap_remove(HashMap* map, const char* key) {
+    if (!map || !key) {
+        fprintf(stderr, "Erreur dans les parametres\n");
+        return EXIT_FAILURE;
+    }
+
+    unsigned long hash = simple_hash(key);
+    while (hash <= TABLE_SIZE) {
+        if (map->table[hash].key == key) {
+            map->table[hash].value = TOMBSTONE;
+            return EXIT_SUCCESS;
+        }
+
+        hash++;
+    }
+
+    fprintf(stderr, "L'element n'a pas pu etre trouve dans la table de hachage\n");
+
+    return EXIT_FAILURE;
+}
+
+void hashmap_destroy(HashMap* map) {
+    if (map) {
+        if (!map->table) {
+            free(map->table);
+        } else {
+            for (int i = 0; i < map->size; i++) {
+                free(map->table[i].key);
+                free(map->table[i].value);
+            }
+            free(map->table);
+        }
+    }
+    free(map);
+    return;
+}
