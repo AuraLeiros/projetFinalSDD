@@ -70,7 +70,6 @@ int hashmap_insert(HashMap* map, const char* key, void* value){
 }
 
 void* hashmap_get(HashMap* map, const char* key) {
-    //on part du principe que cet element est forcement dans la table?
     if (!map || !key){
         fprintf(stderr, "Erreur dans les parametres\n");
         return NULL;

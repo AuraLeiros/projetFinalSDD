@@ -126,15 +126,55 @@ int create_segment(MemoryHandler* handler, const char* name, int start, int size
     return EXIT_SUCCESS;
 }
 
+int remove_segment(MemoryHandler* handler, const char* name) {
+    if (!handler || !name) {
+        fprintf(stderr, "Erreur dans les parametres\n");
+        return EXIT_FAILURE;
+    }
 
+    /* Recherche et suppression du segment dans la memoire allouee */
+    Segment* seg = hashmap_get(handler->allocated, name);
+    if (!seg) {
+        fprintf(stderr, "Le segment n'a pas pu etre trouve\n");
+        return EXIT_FAILURE;
+    }
+    hashmap_remove(handler->allocated, name);
 
+    /* Reliberation du segment dans la free_list (en fait une reinsertion qui code pour de l'espace libre) */
+    Segment* tmp = handler->free_list;
+    /* Creation de deux pointeurs un vers le segment avant et l'autre vers celui apres le segment a reinserer */
+    Segment *prev, *suiv = NULL;
+    while (tmp->start < seg->start) {
+         prev = tmp;
+         suiv = tmp->next;
+         tmp = tmp->next;
+    }
+    /* On doit se charger de 4 cas de reinsertion d'un segment dans la free_list */
+    /* cas 1: le segment se colle directement aux limites de prev et suiv, il faut donc les fusionner */
+    if (prev->start + prev->size == seg->start && suiv->start == seg->start + seg->size) {
+          prev->next = suiv->next;
+          prev->size += seg->size + suiv->size;
+          free(suiv); free(seg);
+    }
+    /* cas 2: le segment doit etre fusionne avec prev mais ne touche pas aux limites de suiv */
+    else if (prev->start + prev->size == seg->start) {
+          prev->size += seg->size;
+          free(seg);
+    }
+    /* cas 3: le segment doit eytre fusionne avec suiv et commence quelque part apres la fin de prev */
+    else if (suiv->start == seg->start + seg->size) {
+          suiv->start = seg->start;
+          suiv->size += seg->size;
+          free(seg);
+    }
+    /* cas 4: le segment s'insere sans fusion */
+    else {
+          prev->next = seg;
+          seg->next = suiv;
+    }
 
-
-
-    
-
-
-
+    fprintf(stderr, "Le segment a été supprimé avec succès et la mémoire a été relibérée.\n");
+    return EXIT_SUCCESS;
 
 }
 
