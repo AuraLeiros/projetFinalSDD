@@ -34,7 +34,7 @@ HashMap* hashmap_create(){
     }
 
     /* Initialization avec calloc pour avoir des valeurs NULL */
-    newHashMap->size = TABLE_SIZE;
+    newHashMap->size = 0;
     newHashMap->table = (HashEntry*)calloc(TABLE_SIZE, sizeof(HashEntry));
     if (!newHashMap->table){
         fprintf(stderr, "Erreur d'allocation memoire d'un nouveau tableau HashEntry\n");

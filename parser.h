@@ -9,6 +9,7 @@
 
 #include "macros.h"
 #include "hachage.h"
+#include "utils.h"
 
 
 typedef struct _instruction {
