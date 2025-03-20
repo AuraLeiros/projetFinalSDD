@@ -1,15 +1,15 @@
 #include "parser.h"
 
 
-
 Instruction* parser_data_instruction(const char* line, HashMap* memory_locations){
+    if (!memory_locations || !line){
+        fprintf(stderr, "Erreur dans les parametres\n");
+        return NULL;
+    }
 
     char var[ASS_MAX_VAR_NAME];
     char label[ASS_MAX_LABEL_LEN];
     char ligne[ASS_MAX_NB];
-    int ligneNum;
-
-    int count;
     
     /* Lecture de la ligne et découpage en tokens z*/
     if (sscanf(line, "%s %s %[^\n]", var, label, ligne) < 3) {
@@ -24,31 +24,73 @@ Instruction* parser_data_instruction(const char* line, HashMap* memory_locations
         return NULL;
     }
 
+    /* Calcul du nombre d'elements dans la variable */
+    char* ptr = ligne;
+    int count = 1;
 
-    /* Calcul du dernier element */
-    const char *elem = strrchr(ligne, ',');
-    if (elem) {
-        ligneNum = atoi(elem + 1);
-    } else {
-        ligneNum = atoi(ligne);        
+    while (ptr){
+        if (*ptr == ',') count++;
+        ptr++;
     }
 
-    while (*ligne) {
-        if (*ligne == ','){
-           count++; 
+    /* Insertion de la variable et MAJ du size de la table d'hachage*/
+    hashmap_insert(memory_locations, var, (memory_locations->size));
+    memory_locations->size += count;
+
+    return i;
+}
+
+Instruction* parser_code_instruction(const char* line, HashMap* labels, int code_count){
+    if (!line || !labels){
+        fprintf(stderr, "Erreur dans les paramètres\n");
+        return NULL;
+    }
+
+    char var[ASS_MAX_VAR_NAME];
+    char label[ASS_MAX_LABEL_LEN];
+    char ligne[ASS_MAX_NB];
+
+    char operand1[ASS_MAX_VAR_NAME];
+    char operand2[ASS_MAX_LABEL_LEN] = "";
+    Instruction* i = NULL;
+
+    /* Lecture d'une ligne avec les deux possibilites*/
+    int res = sscanf(line, "%s %s %s", var, label, ligne);
+     
+    if (res == 3){
+
+        if (sscanf(ligne, "%[^,] %s", operand1, operand2) < 1) {
+            fprintf(stderr, "Erreur dans l'extraction des opérandes\n");
+            return NULL;
         }
-        
-        *ligne++;
+
+        i = nouvelleInstruction(label, operand1, operand2);
+
+        hashmap_insert(labels, var, code_count);
+
+    } else if (res == 2){
+
+        if (sscanf(label, "%[^,] %s", operand1, operand2) < 1) {
+            fprintf(stderr, "Erreur dans l'extraction des opérandes\n");
+            return NULL;
+        }
+
+        i = nouvelleInstruction(var, operand1, operand2);
+
+    } else {
+        fprintf(stderr, "Erreur dans la lecture\n");
+        return NULL;
+    }
+    
+    if (!i){
+        fprintf(stderr, "Erreur dans la creation d'une nouvelle Instruction\n");
+        return NULL;
     }
 
-
-    /* Insertion dans la table d'hachage */
-
-    
-
-
+    return i;
 
 }
+
 
 
 

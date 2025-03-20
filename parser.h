@@ -30,6 +30,8 @@ typedef struct _ParserResult {
 
 Instruction* parser_data_instruction(const char* line, HashMap* memory_locations);
 
+Instruction* parser_code_instruction(const char* line, HashMap* labels, int code_count);
+
 
 /* Fonctions auxiliaires */
 

@@ -13,5 +13,6 @@
 /* Macros pour le parser */
 #define ASS_MAX_VAR_NAME 256 //Similaire aux assamblateurs actuels; 255 + 1 (le \0)
 #define ASS_MAX_LABEL_LEN 256
+#define ASS_MAX_NB 64
 
 #endif
