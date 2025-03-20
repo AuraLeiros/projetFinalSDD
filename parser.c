@@ -91,6 +91,25 @@ Instruction* parser_code_instruction(const char* line, HashMap* labels, int code
 
 }
 
+ParserResult* parse(const char* filename){
+    // FONCTION LECTURE FICHIER MINI-PROJET
+
+    if (!f) {
+        fprintf(stderr, "Erreur dans la lecture d'un fichier\n");
+        return NULL;
+    }
+
+    /* Nouvelle structure ParserResult */
+    ParserResult * parser = malloc
+
+    char line[ASS_MAX_LINE_LEN];
+
+    while (fgets(line, ASS_MAX_LINE_LEN, f)) {
+
+
+    }
+}
+
 
 
 
