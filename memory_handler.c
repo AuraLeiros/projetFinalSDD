@@ -1,32 +1,41 @@
 #include "memory_handler.h"
 
 MemoryHandler* memory_init(int size) {
+    if (size <= 0){
+        fprintf(stderr, "Le size passé en parametre est nul");
+        return NULL;
+    }
 
-    /* Allocation et initialisation du memory_handler */
-    MemoryHandler* mem = malloc(sizeof(MemoryHandler));
-    if (!mem) {
-        fprintf(stderr, "Erreur d'allocation memoire d'un nouveau Memoryhandler\n");
+    /* Allocation d'une nouvelle structure MemoryHandler */
+    MemoryHandler* m = (MemoryHandler*)malloc(sizeof(MemoryHandler));
+    if (!m) {
+        fprintf(stderr, "Erreur dans l'allocation d'un nouveau memory handler\n");
         return NULL;
     }
 
     /* NOTE: la taille maximale de memoire que l'on peut allouer plus tard */
-    mem->total_size = size; 
-
+    m->total_size = size;
+    
     /* Allocation et initialisation de la free_list */
-    mem->free_list = malloc(sizeof(Segment*) * size);
-    if (!mem->free_list) {
-        fprintf(stderr, "Erreur d'allocation memoire d'une free-list\n");
-        return NULL;
+    m->free_list = (Segment*)malloc(sizeof(Segment));
+    if (!m->free_list) {
+        fprintf(stderr, "Erreur dans l'allocation d'un nouveau segment\n");
+        goto erreur;
     }
 
-    mem->free_list->size = size;
-    mem->free_list->start = 0;
-    mem->free_list->next = NULL;
+    m->free_list->size = size;
+    m->free_list->start = 0;
+    m->free_list->next = NULL;
+
+    /* On initialise le pointer a la memoire allouee comme NULL */
+    m->memory = NULL;
+
+    return m;
 
 
-    mem->allocated = hashmap_create();
-
-    return mem;
+    erreur:
+        remove_memory_handler(m);
+        return NULL;
 }
 
 Segment* find_free_segment(MemoryHandler* handler, int start, int size, Segment** prev) {
@@ -178,3 +187,38 @@ int remove_segment(MemoryHandler* handler, const char* name) {
 
 }
 
+
+/* Fonctions auxiliaires */
+
+
+void remove_memory_handler(MemoryHandler* m){
+    if (!m) return;
+
+    if (m->allocated) hashmap_destroy(m->allocated);
+    if (m->free_list) remove_free_list(m->free_list);
+
+    if (m->memory) {
+        for (int i=0; i < m->total_size; i++){
+            if (m->memory[i]) free(m->memory[i]);
+        }
+
+        free(m->memory);
+    }
+
+    free(m);
+
+    return;
+}
+
+void remove_free_list(Segment* seg) {
+    if (!seg) return;
+
+    Segment* curr = seg;
+    Segment* next;
+
+    while (curr) {
+        next = curr->next;
+        free(curr);
+        curr = next;
+    }
+}

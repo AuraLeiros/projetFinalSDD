@@ -28,7 +28,7 @@ Instruction* parser_data_instruction(const char* line, HashMap* memory_locations
     char* ptr = ligne;
     int count = 1;
 
-    while (ptr){
+    while (*ptr) { 
         if (*ptr == ',') count++;
         ptr++;
     }
@@ -46,15 +46,12 @@ Instruction* parser_code_instruction(const char* line, HashMap* labels, int code
         return NULL;
     }
 
-    char var[ASS_MAX_VAR_NAME];
-    char label[ASS_MAX_LABEL_LEN];
-    char ligne[ASS_MAX_NB];
-
+    char var1[ASS_MAX_VAR_NAME];
+    char var2[ASS_MAX_VAR_NAME];
+    char operands[ASS_MAX_VAR_NAME];
     char operand1[ASS_MAX_VAR_NAME];
     char operand2[ASS_MAX_LABEL_LEN] = "";
     Instruction* i = NULL;
-
-    sscanf(x, y, label, var, operands)
 
     /* Lecture d'une ligne avec les deux possibilites*/
     int res = sscanf(line, "%s %s %s", var1, var2, operands);
@@ -91,7 +88,6 @@ Instruction* parser_code_instruction(const char* line, HashMap* labels, int code
 }
 
 
-
 ParserResult* parse(const char* filename){
     if (!filename){
         fprintf(stderr, "Erreur dans les parametres\n");
@@ -105,68 +101,129 @@ ParserResult* parse(const char* filename){
         goto erreur;
     }
 
+    /* Allocation d'un nouveau parser */
     ParserResult* parser = nouveauParser();
     if (!parser){
         fprintf(stderr, "Erreur dans l'allocation d'un nouveau parser\n");
-        return NULL;
+        goto erreur;
     }
-
 
     char line[ASS_MAX_LINE_LEN] = "";
-    int isData = 0;
-    int isCode = 0;
+    int section = -1;
+    Instruction* i = NULL;
+    Instruction** tmp = NULL;
 
-    while (fgets(line, ASS_MAX_LINE_LEN, f)) {
+    while (fgets(line, ASS_MAX_LINE_LEN, f)){
 
-        if (line == ".DATA\n") {
-            isData = 1;
-            isCode = 0;
-        } else if (line == ".CODE\n") {
-            isData = 0;
-            isCode = 1;
+        /* Échanger le saut de ligne pour un null-terminateur*/
+        line[strcspn(line, "\n")] = '\0';
+
+        /* Selection de la section .DATA / .CODE*/
+        if (strcmp(line, ".DATA") == 0){
+            section = 0;
+            continue;
         }
 
-        if (isData){
+        if (strcmp(line, ".CODE") == 0){
+            section = 1;
+            continue;
+        }
+
+        /* Traitement du parsing */
+        switch(section){
+
+            /* Parsing le .DATA*/
+            case 0:
+                i = parser_data_instruction(line, parser->memory_locations);
+                if (!i){
+                    fprintf(stderr, "Erreur dans le parsing\n");
+                    goto erreur;
+                }
+
+                tmp = (Instruction**)realloc(parser->data_instructions, (++parser->data_count) * sizeof(Instruction*));
+                if (!tmp){
+                    fprintf(stderr, "Erreur dans la reallocation\n");
+                    goto erreur;
+                }
+
+                parser->data_instructions = tmp;
+                parser->data_instructions[(parser->data_count) - 1] = i;
+
+                i = NULL;
+                tmp = NULL;
+
+                break;
+
+            /* Parsing le .CODE*/
+            case 1:
+                i = parser_code_instruction(line, parser->labels, parser->code_count);
+                if (!i){
+                    fprintf(stderr, "Erreur dans le parsing\n");
+                    goto erreur;
+                }
+
+                tmp = (Instruction**)realloc(parser->code_instructions, (++parser->code_count) * sizeof(Instruction*));
+                if (!tmp){
+                    fprintf(stderr, "Erreur dans la reallocation\n");
+                    goto erreur;
+                }
+
+                parser->code_instructions = tmp;
+                parser->code_instructions[(parser->code_count) - 1] = i;
             
+                i = NULL; 
+                tmp = NULL;
 
+                break;
+
+            default:
+                fprintf(stderr, "L'input n'est pas valide\n");
+                goto erreur;
         }
-        
-
-
-        if ()
-
 
     }
 
-
-
-
-
+    return parser;
 
     erreur:
         fclose(f);
-
+        if (i) libererInstruction(i);
+        if (parser) free_parser_result(parser);
         return NULL;
+}
+
+/* Liberation de toute la memoire alloue a un parser et ses elements */
+void free_parser_result(ParserResult* p){
+    if (!p) return;
 
 
+    int max = (p->data_count) >= (p->code_count) ? p->data_count : p->code_count;
 
-    if (!f) {
-        fprintf(stderr, "Erreur dans la lecture d'un fichier\n");
-        return NULL;
+    /* Liberer tous les elements dans chaque tableau */
+    for(int i = 0; i < max; i++){
+        if (p->data_instructions[i] && i < p->data_count) libererInstruction(p->data_instructions[i]);
+        if (p->code_instructions[i] && i < p->code_count) libererInstruction(p->code_instructions[i]);
     }
 
-    /* Nouvelle structure ParserResult */
-    ParserResult * parser = malloc
+    /* Liberation du pointer vers le tableau*/
+    free(p->data_instructions);
+    free(p->code_instructions);
 
-    char line[ASS_MAX_LINE_LEN];
+    /* Liberaton des tables de hachage */
+    hashmap_destroy(p->labels);
+    hashmap_destroy(p->memory_locations);
 
-    while (fgets(line, ASS_MAX_LINE_LEN, f)) {
+    /* Liberation du parser*/
+    free(p);
 
-
-    }
+    return;
 }
 
 
+
+/*------------------------*/
+/* Fonctions auxiliaires */
+/*------------------------*/
 
 
 /* Fonction auxiliaire pour allouer et initialiser une nouvelle instruction */
@@ -257,30 +314,7 @@ ParserResult* nouveauParser(){
     return parser;
 
     erreur:
-        libererParser(parser);
+        free_parser_result(parser);
         return NULL;
 
-}
-
-/* Liberation de toute la memoire alloue a un parser et ses elements */
-void libererParser(ParserResult* p){
-    if (!p) return;
-
-
-    int max = (p->data_count) >= (p->code_count) ? p->data_count : p->code_count;
-
-    for(int i = 0; i < max; i++){
-        if (i < data_count) libererInstruction(p->data_instructions[i]);
-        if (i < code_count) libererInstruction(p->code_instructions[i]);
-    }
-
-    free(data_instructions);
-    free(code_instructions);
-
-    hashmap_destroy(labels);
-    hashmap_destroy(memory_locations);
-
-    free(p);
-
-    return;
 }
