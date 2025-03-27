@@ -47,7 +47,7 @@ Segment* find_free_segment(MemoryHandler* handler, int start, int size, Segment*
     Segment* tmp = handler->free_list;
     while (!tmp) {
 
-        if (tmp->start <= start && tmp->start + tmp->size >= start + size) {
+        if ((tmp->start <= start) && ((tmp->start + tmp->size) >= (start + size))) {
             return tmp;
         }
 
@@ -82,7 +82,7 @@ int create_segment(MemoryHandler* handler, const char* name, int start, int size
     new_seg->size = size;
     new_seg->next = NULL;
 
-    int insert = hashmap_insert(handler->allocated, key = name, value = new_seg);
+    int insert = hashmap_insert(handler->allocated, name, new_seg);
     if (insert == EXIT_FAILURE) {
         fprintf(stderr, "Erreur dans la gestion de la memoire\n");
         return EXIT_FAILURE;

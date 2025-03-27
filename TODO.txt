@@ -1,3 +1,5 @@
 1. Comments in the hachage.h EN FRANCAIS !!!
 2. Comments everywhere!! just be EXTREME.....
 3. Look at second week assignment.
+
+4. Check the casting to (void*) in the hashmap_insert in the parser and memory_handler functions.
