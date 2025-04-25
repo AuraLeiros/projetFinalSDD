@@ -3,3 +3,26 @@
 3. Look at second week assignment.
 
 4. Check the casting to (void*) in the hashmap_insert in the parser and memory_handler functions.
+
+
+my_library/
+│── include/            # Header files (.h)
+│   ├── my_library.h
+│── src/                # Implementation files (.c)
+│   ├── my_library.c
+│── tests/              # Test files
+│   ├── test_my_library.c
+│── Makefile            # For building the library and tests
+│── README.md
+
+
+projet structure like this one
+
+
+
+
+
+
+
+
+/* CHECK OUT possible memory leaks in the allocation of hashentry elements in the create hashmap function */

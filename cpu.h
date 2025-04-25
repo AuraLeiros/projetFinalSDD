@@ -3,14 +3,21 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <regex.h>
 
 #include "memory_handler.h"
 #include "hachage.h"
+#include "parser.h"
+
+
 
 typedef struct {
     MemoryHandler* memory_handler;
     HashMap* context;
+    HashMap* constant_pool;
 } CPU;
+
+
 
 CPU* cpu_init(int memory_size);
 
@@ -24,6 +31,7 @@ void allocate_variables(CPU* cpu, Instruction** data_instructions, int data_coun
 
 void print_data_segment(CPU* cpu);
 
+int matches(const char *pattern, const char *string);
 
 
 

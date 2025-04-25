@@ -1,4 +1,5 @@
-#include "hachage.h"
+#include "../include/hachage.h"
+
 
 unsigned long simple_hash(const char* str){
     if (!str || str[0] == '\0'){
@@ -21,19 +22,19 @@ unsigned long simple_hash(const char* str){
 
 HashMap* hashmap_create(){
 
-    /* Allocation memoire pour un nouveau HashMap */
+    /* Allocation memoire d'un nouveau HashMap */
     HashMap* h = (HashMap*)malloc(sizeof(HashMap));
     if (!h){
         fprintf(stderr, "Erreur d'allocation memoire d'un nouveau HashMap\n");
         goto erreur;
     }
 
-    /* Initialization des elements de la table */
     h->size = 0;
+
+    /* Allocation memoire et initialisation (a 0 / NULL) des elements du HashMap */
     h->table = (HashEntry*)calloc(TABLE_SIZE, sizeof(HashEntry));
     if (!h->table){
         fprintf(stderr, "Erreur dans l'initialization memoire de la table du HashMap");
-        goto erreur;
     }
 
     return h;
@@ -43,22 +44,22 @@ HashMap* hashmap_create(){
         return NULL;
 }
 
+
 int hashmap_insert(HashMap* map, const char* key, void* value){
     if (!map || (!key || key[0] == '\0') || !value){
-        fprintf(stderr, "Erreur dans les parametres\n");
-        return EXIT_FAILURE;
+        fprintf(stderr, "Erreur dans les parametres");
+        return EXIT_FAILURE;    
     }
 
-    /* Calcul du hash de notre clé */
+    /* Calcul du premier hash */
     unsigned long hash = simple_hash(key);
-    unsigned long original_hash = hash;
+    unsigned long originalHash = hash;
 
     do {
 
-        /* S'on trouve une case sans valeur ou avec une stele on fait l'insertion */
         if ((map->table[hash].value == NULL) || (map->table[hash].value == TOMBSTONE)){
-            
-            /* On connait pas la valeur, on copie le pointeur */
+
+            /* On connait pas la taille, on ne peut pas faire une deep copy de la valeur */
             map->table[hash].key = strdup(key);
             if (!map->table[hash].key){
                 fprintf(stderr, "Erreur dans l'allocation d' une nouvelle cle\n");
@@ -77,11 +78,11 @@ int hashmap_insert(HashMap* map, const char* key, void* value){
         }
 
         /* Linear probing pour trouver la premiere case vide */
-        hash = (hash + 1) % TABLE_SIZE;
+        hash = (++hash) % TABLE_SIZE;
 
-    } while(hash != original_hash);
+    } while (hash != originalHash);
 
-    printf("Aucune case vide a ete trouve\n");
+    printf("L'element n'a pas pu etre insere\n");
     return EXIT_FAILURE;
 }
 
@@ -92,19 +93,20 @@ void* hashmap_get(HashMap* map, const char* key){
     }
 
     unsigned long hash = simple_hash(key);
-    unsigned long original_hash = hash;
+    unsigned long originalHash = hash;
 
     do {
 
-        /* Si l'element courant contient la cle on retourne la valeur */
+        /* Verifier si l'element courant est l'element recherche */
         if (strcmp(map->table[hash].key, key) == 0) return map->table[hash].value;
 
-        /* Else on fait du linear probing pour trouver la cle */
-        hash = (hash + 1) % TABLE_SIZE;
-        
-    } while (hash != original_hash);
+        /* Linear probing pour avancer dans le HashMap*/
+        hash = (++hash) % TABLE_SIZE;
 
-    printf("Le element n'a pas ete trouve dans le HashMap\n");
+    } while (hash != originalHash);
+
+    printf(stderr, "Aucun element avec la cle utilise a ete trouve\n");
+
     return NULL;
 }
 
@@ -115,38 +117,47 @@ int hashmap_remove(HashMap* map, const char* key){
     }
 
     unsigned long hash = simple_hash(key);
-    unsigned long original_hash = simple_hash(key);
+    unsigned long originalHash = simple_hash(key);
 
     do {
 
-        /* On a trouve la valeur a effacer */
+        /* On a trouve l'element a effacer */
         if (strcmp(map->table[hash].key, key) == 0){
+
+            /* Liberation de la memoire alloue a la cle */
             free(map->table[hash].key);
+
+            /* Replacement de la valeur par un TOMBSTONE */
             map->table[hash].value = TOMBSTONE;
+
             return EXIT_SUCCESS;
         }
 
-        /* On continue le probing lineaire */
-        hash = (hash + 1) % TABLE_SIZE;
+        /* Linear probing pour avancer dans le HashMap */
+        hash = (++hash) % TABLE_SIZE;
 
-    } while (hash != original_hash);
+    } while (hash != originalHash);
 
-    printf("L'element a effacer n'a pas ete trouve\n");
+    printf(stderr, "Aucun element avec la cle utilise a ete trouve\n");
+
     return EXIT_FAILURE;
 }
 
-void hashmap_destroy(HashMap* map) {
-    if (map) {
-        if (!map->table) {
-            free(map->table);
-        } else {
-            for (int i = 0; i < map->size; i++) {
-                free(map->table[i].key);
-                free(map->table[i].value);
-            }
-            free(map->table);
+
+void hashmap_destroy(HashMap* map){
+    if (!map) return;
+
+    /* Liberation de tous les elements dans le tableau */
+    /* On ne peut pas liberer les value vu qu'on sait pas s'on été alloues */
+    if (map->table){
+        for (int i=0; i < TABLE_SIZE; i++){
+            if (map->table[i].key) free(map->table[i].key);
         }
+
+        free(map->table);
     }
+
     free(map);
+
     return;
 }

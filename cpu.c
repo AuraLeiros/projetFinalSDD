@@ -27,6 +27,13 @@ CPU* cpu_init(int memory_size){
         goto erreur;
     }
 
+    HashMap* poolHM = hashmap_create();
+    if (!poolHM){
+        fprintf(stderr, "Erreur dans l'allocation d'un nouveau constant_pool\n");
+        goto erreur;
+    }
+
+
     /* Ajout des registres generaux dans le hashmap*/
     hashmap_insert(newHashMap, "AX", (void*)0);
     hashmap_insert(newHashMap, "BX", (void*)0);
@@ -36,6 +43,7 @@ CPU* cpu_init(int memory_size){
     /* Relier les structures au CPU */
     newCPU->memory_handler = newMemoryHandler;
     newCPU->context = newHashMap;
+    newCPU->constant_pool = poolHM;
 
     return newCPU;
 
@@ -44,9 +52,8 @@ CPU* cpu_init(int memory_size){
         if (newCPU) cpu_destroy(newCPU);
         if (newMemoryHandler) remove_memory_handler(newMemoryHandler);
         if (newHashMap) hashmap_destroy(newHashMap);
+        if (poolHM) hashmap_destroy(poolHM);
         return NULL;
-        
-
 }
 
 void cpu_destroy(CPU* cpu){
@@ -55,6 +62,7 @@ void cpu_destroy(CPU* cpu){
     /* Liberer la memoire des structures reliees */
     if (cpu->memory_handler) remove_memory_handler(cpu->memory_handler);
     if (cpu->context) hashmap_destroy(cpu->context);
+    if (cpu->constant_pool) hashmap_destroy(cpu->constant_pool);
 
     /* Liberer le cpu */
     free(cpu);
@@ -104,19 +112,91 @@ void* load(MemoryHandler* handler, const char* segment_name, int pos){
 } 
 
 void allocate_variables(CPU* cpu, Instruction** data_instructions, int data_count){
-    if (!cpu || !data_instructions){
+    if (!cpu || !data_instructions || data_count < 0){
         fprintf(stderr, "Erreur dans les parametres\n");
         return;
     }
 
-    parser_data_instruction()
-//ds will have size data_count and be inserted as first allocated segment in cpu->memoryHandler->memory
-//the free-list of this memory handler then contains the free segment starting at index data_count....
+    int totalMemory = 0;
+    int* tempList = malloc(sizeof(int))
+    
+    for (int x=0; x < data_count; x++){
+        if (strcmp(data_instructions[x]->mnemonic, "arr") == 0){
+            int count = 1;
+            char* ptr = data_instructions[x]->operand2;
+            while (*ptr){
+                if (strcmp(ptr, ',') == 0) count++;
+                ptr++;
+            }
+            totalMemory += count;
+        } else {
+            totalMemory++;
+        }
+    }
 
+    int s = create_segment(cpu->memory_handler, "DS", 0, totalMemory);
+    if (!s) {
+        fprintf(stderr, "Erreur dans la creation d' un nouveau segment\n");
+        return;
+    }
+
+    int i = 0;
+    for (int x=0; x < data_count; x++) {
+        if (strcmp(data_instructions[x]->mnemonic, "arr") == 0){
+            char* ptr = data_instructions[x]->operand2;
+            while (*ptr){
+                if (*ptr != ','){
+                    cpu->memory_handler->memory[i] = (int)(*ptr);
+                    i++;   
+                }
+
+                ptr++;
+            }
+        } else {
+            cpu->memory_handler->memory[i] = (int)data_instructions[x]->operand2;
+            i++;
+        }
+    }
+
+    return;
 }
 
-void print_data_segment(CPU* cpu);
 
+void print_data_segment(CPU* cpu){
+    if (!cpu){
+        fprintf(stderr, "Erreur dans les parametres\n");
+    }
+
+    Segment* s = (Segment*)hashmap_get(cpu->memory_handler->allocated, "DS");
+    if (!s){
+        fprintf(stderr, "Erreur dans les parametres\n");
+        return;
+    }
+
+    int start = s->start;
+    int end = s->size - s->start;
+
+    for (int x=start; x < end; x++) printf("%d\t", cpu->memory_handler->memory[x]);
+    printf("\n");
+
+    return;
+}
+
+
+int matches(const char *pattern, const char *string) {
+
+    regex_t regex;
+
+    int result = regcomp(&regex, pattern, REG_EXTENDED);
+    if (result) {
+        fprintf(stderr, "Regex compilation failed for pattern: %s\n", pattern);
+        return 0;
+    }
+
+    result = regexec(&regex, string, 0, NULL, 0);
+    regfree(&regex);
+    return result == 0;
+}
 
 
 
