@@ -48,3 +48,4 @@ Aura Leirós García
 
  - Exercice 5.7
  - Check the implementation of the Q.5.4 (in cpu.c)
+ - check backslash regex

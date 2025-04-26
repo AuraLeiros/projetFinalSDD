@@ -54,13 +54,51 @@ void* register_indirect_addressing(CPU* cpu, const char* operand);
 /* Teste toutes les methodes d'adressage et retourne une valeur */
 void* resolve_addressing(CPU* cpu, const char* operand);
 
-
+/* Remplace les constantes et les etiquettes par les addresses */
+int resolve_constants(ParserResult* result);
 
 /* Simulation de l'instruction assambleur MOV */
 void handle_MOV(CPU* cpu, void* src, void* dest);
 
 /* Fonction donnée pour mettre en place l'environnement */
 CPU* setup_test_environment();
+
+/* Traite une liste de instructions et les ajoute dans le segment CS*/
+void allocate_code_segment(CPU* cpu, Instruction** code_instructions, int code_count);
+
+/* Effectuer des operations */
+int handle_instructions(CPU* cpu, Instruction* instr, void* src, void* dest);
+
+int execute_instructions(CPU* cpu, Instruction* instr);
+
+/*-------------------------*/
+/* Fonctions auxiliaires*/
+/*-------------------------*/
+
+int handle_ADD(CPU* cpu, void* src, void* dest);
+
+int handle_CMP(CPU* cpu, void* src, void* dest);
+
+int handle_JMP(CPU* cpu, void* src, void* dest);
+
+int handle_JZ(CPU* cpu, void* src, void* dest);
+
+int handle_JNZ(CPU* cpu, void* src, void* dest);
+
+int handle_HALT(CPU* cpu, void* src, void* dest);
+
+int handle_PUSH(CPU* cpu, void* src);
+
+int handle_POP(CPU* cpu, void* dest);
+
+
+/* todo */
+int alloc_es_segment(CPU* cpu);
+
+int free_es_segment(CPU* cpu);
+
+
+
 
 
 #endif

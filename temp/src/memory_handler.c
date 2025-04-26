@@ -43,7 +43,7 @@ MemoryHandler* memory_init(int size) {
 
     erreur:
         if (mh) remove_memory_handler(mh);
-        if (s) free_liste_segment(s);
+        if (s) remove_free_list(s);
         if (h) hashmap_destroy(h);
         return NULL;
 

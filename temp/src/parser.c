@@ -34,7 +34,7 @@ Instruction* parser_data_instruction(const char* line, HashMap* memory_locations
 
     /* Insertion dans le HashMap et m-a-j du nombre d'elements */
     if (hashmap_insert(memory_locations, nomVar, (memory_locations->size)) == EXIT_FAILURE){
-        fprintf(stderr, "Erreur dans l'insertion dans le HansMap");
+        fprintf(stderr, "Erreur dans l'insertion dans le HansMap\n");
         goto erreur;
     }
 
@@ -247,7 +247,7 @@ Instruction* nouvelleInstruction(char* mnemonic, char* operand1, char* operand2)
     /* Allocation d'une nouvelle instruction */
     Instruction* i = (Instruction*)malloc(sizeof(Instruction));
     if (!i){
-        fprintf(stderr, "Erreur dans l'allocation mémoire d'une nouvelle instruction");
+        fprintf(stderr, "Erreur dans l'allocation mémoire d'une nouvelle instruction\n");
         goto erreur;
     }
 
@@ -259,13 +259,13 @@ Instruction* nouvelleInstruction(char* mnemonic, char* operand1, char* operand2)
 
     i->operand1 = strdup(operand1);
     if (!i->operand1){
-        fprintf(stderr, "Erreur dans la copie de l'operand1");
+        fprintf(stderr, "Erreur dans la copie de l'operand1\n");
         goto erreur;
     }
 
     i->operand2 = strdup(operand2);
     if (!i->operand2){
-        fprintf(stderr, "Erreur dans la copie de l'operand2");
+        fprintf(stderr, "Erreur dans la copie de l'operand2\n");
         goto erreur;
     }
 
@@ -289,22 +289,73 @@ void libererInstruction(Instruction* i){
     return;
 }
 
+char* trim(char* str) {
+    while (*str == ' ' || *str == '\t' || *str == '\n' || *str == '\r')
+        str++;
 
+    char *end = str + strlen(str) - 1;
+    while (end > str && (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r')) {
+        *end = '\0';
+        end--;
+    }
 
+    return str;
+}
 
+int search_and_replace(char** str, HashMap* values) {
+    if (!str || !*str || !values) return 0;
 
+    int replaced = 0;
+    char *input = str;
 
+    // Iterate through all keys in the hashmap
+    for (int i = 0; i < TABLE_SIZE; i++) {
+        if (values->table[i].key && values->table[i].key != TOMBSTONE) {
+            char *key = (char *)values->table[i].key;
+            int* value = (int*)values->table[i].value;
 
+            // Find potential substring match
+            char *substr = strstr(input, key);
+            if (substr) {
+                // Construct replacement buffer
+                char replacement[64];
+                snprintf(replacement, sizeof(replacement), "%d", value);
 
+                // Calculate lengths
+                int key_len = strlen(key);
+                int repl_len = strlen(replacement);
+                int input_len = strlen(substr + key_len);
 
+                // Create new string
+                char *new_str = (char *)malloc(strlen(input) - key_len + repl_len + 1);
+                strncpy(new_str, input, substr - input);
+                new_str[substr - input] = '\0';
+                strcat(new_str, replacement);
+                strcat(new_str, substr + key_len);
 
+                // Free and update original string
+                free(input);
+                *str = new_str;
+                input = new_str;
+                replaced = 1;
+            }
+        }
+    }
 
+    // Trim the final string
+    if (replaced) {
+        char *trimmed = trim(input);
+        if (trimmed != input) {
+            memmove(input, trimmed, strlen(trimmed) + 1);
+        }
+    }
 
-
+    return replaced;
+}
 
 
 /*------------------------*/
-/* Fonctions auxiliaires */
+/* Fonctions auxiliaires  */
 /*------------------------*/
 
 
@@ -382,67 +433,3 @@ ParserResult* nouveauParser(){
 
 }
 
-
-char* trim(char* str) {
-    while (*str == ' ' || *str == '\t' || *str == '\n' || *str == '\r')
-        str++;
-
-    char *end = str + strlen(str) - 1;
-    while (end > str && (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r')) {
-        *end = '\0';
-        end--;
-    }
-
-    return str;
-}
-
-int search_and_replace(char* str, HashMap* values) {
-    if (!str || !*str || !values) return 0;
-
-    int replaced = 0;
-    char *input = str;
-
-    // Iterate through all keys in the hashmap
-    for (int i = 0; i < TABLE_SIZE; i++) {
-        if (values->table[i].key && values->table[i].key != TOMBSTONE) {
-            char *key = (char *)values->table[i].key;
-            int value = (int*)values->table[i].value;
-
-            // Find potential substring match
-            char *substr = strstr(input, key);
-            if (substr) {
-                // Construct replacement buffer
-                char replacement[64];
-                snprintf(replacement, sizeof(replacement), "%d", value);
-
-                // Calculate lengths
-                int key_len = strlen(key);
-                int repl_len = strlen(replacement);
-                int input_len = strlen(substr + key_len);
-
-                // Create new string
-                char *new_str = (char *)malloc(strlen(input) - key_len + repl_len + 1);
-                strncpy(new_str, input, substr - input);
-                new_str[substr - input] = '\0';
-                strcat(new_str, replacement);
-                strcat(new_str, substr + key_len);
-            
-                // Free and update original string
-                free(input);
-                *str = new_str;
-                input = new_str;
-                replaced = 1;
-            }
-        }
-    }
-
-    // Trim the final string
-    if (replaced) {
-        char *trimmed = trim(input);
-        if (trimmed != input) {
-            memmove(input, trimmed, strlen(trimmed) + 1);
-        }
-    }
-
-    return replaced;
-}

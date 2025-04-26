@@ -47,14 +47,14 @@ CPU* cpu_init(int memory_size){
     for (int x=0; x < numReg; x++) {
         val = (int*)malloc(sizeof(int));
         if (!val) {
-            fprintf(stderr, "Erreur dans l'allocation memoire d'un val");
+            fprintf(stderr, "Erreur dans l'allocation memoire d'un val\n");
             goto erreur;
         }
 
         *val = 0;
         
         if (!hashmap_insert(contextHM, reg[x], val)){
-            fprintf(stderr, "Erreur dasn l'insertion dans le HashMap\n");
+            fprintf(stderr, "Erreur dans l'insertion dans le HashMap\n");
             goto erreur;
         }
     }
@@ -249,8 +249,7 @@ void* immediate_addressing(CPU* cpu, const char* operand){
     }
 
     int* val = NULL;
-    int* num;
-    /* utilisation du regex pour tester si l'operande est du bon format pour un addressage immediat */
+    int* num;    /* utilisation du regex pour tester si l'operande est du bon format pour un addressage immediat */
     if (matches("^[0-9]+$", operand)) {
         val = (int*)hashmap_get(cpu->constant_pool, operand);
 
@@ -299,7 +298,7 @@ void* memory_direct_addressing(CPU* cpu, const char* operand) {
 
     int valReg;
     
-    if (matches("^\\[[0-9]+\\]", operand)){
+    if (matches("^\[[0-9]+\]", operand)){
 
         if (!(sscanf(operand, "[%d]", &valReg) == 1)) {
             fprintf(stderr, "Erreur dans la lecture de la valeur\n");
@@ -348,6 +347,8 @@ void handle_MOV(CPU* cpu, void* src, void* dest){
         fprintf(stderr, "Erreur dans les parametres\n");
         return;
     }
+
+    // TODO
 
     memcpy(dest, src, sizeof(int));
 
@@ -453,4 +454,157 @@ int resolve_constants(ParserResult* result) {
     return EXIT_SUCCESS;
 }
 
+void allocate_code_segment(CPU* cpu, Instruction** code_instructions, int code_count){
+	if (!cpu || !code_instructions || code_count < 0) {
+          fprintf(stderr, "Erreur dans les parametres\n");
+          return;
+    }
 
+    /* On insere le segment CS juste après le segment DS donc à une valeur de start egale a la taille de DS */
+    Segment* dataSeg = hashmap_get(cpu->context, "DS");
+
+	/* Creer un nouveau Segment pour le CS */
+    if (!create_segment(cpu->memory_handler, "CS", (dataSeg->start + dataSeg->size + 1), code_count)){
+    	fprintf(stderr, "Erreur dans la creation d'un nouveau segment\n");
+        return;
+    }
+
+    Instruction* tmp = NULL;
+
+    /* Traitement des instructions */
+    for (int i = 0; i < code_count; i++) {
+
+      tmp = code_instructions[i];
+
+      if (tmp->operand2) {
+        resolve_addressing(cpu, tmp->operand2);
+      } else if (tmp->operand1) {
+        resolve_addressing(cpu, tmp->operand1);
+      } else {
+       	fprintf(stderr, "L'instruction n'est pas valide\n");
+        return;
+      }
+
+      if (!store(cpu->memory_handler, "CS", i, (void*)tmp)) {
+        fprintf(stderr, "Erreur dans le stockage\n");
+        return;
+      }
+
+    }
+
+    int* IP = hashmap_get(cpu->context, "IP");
+    if (!IP) {
+      fprintf(stderr, "Le registre n'existe pas\n");
+      return;
+    }
+
+    *IP = 0;
+}
+
+int handle_instructions(CPU* cpu, Instruction* instr, void* src, void* dest) {
+	if (!cpu || !instr || !src || !dest) {
+          fprintf(stderr, "Erreur dans les parametres\n");
+          return EXIT_FAILURE;
+	}
+
+    if (strcmp(instr->mnemonic, "MOV") == 0) {
+      handle_MOV(cpu, src, dest);
+      return EXIT_SUCCESS;
+    }
+
+    if (strcmp(instr->mnemonic, "ADD") == 0) {
+      return handle_ADD(cpu, src, dest);
+    }
+
+    if (strcmp(instr->mnemonic, "CMP") == 0) {
+      return handle_CMP(cpu, src, dest);
+    }
+
+    if (strcmp(instr->mnemonic, "JMP") == 0) {
+      return handle_JMP(cpu, src, dest);
+    }
+
+    if (strcmp(instr->mnemonic, "JZ") == 0) {
+      return handle_JZ(cpu, src, dest);
+    }
+
+    if (strcmp(instr->mnemonic, "JNZ") == 0) {
+      return handle_JNZ(cpu, src, dest);
+    }
+
+    if (strcmp(instr->mnemonic, "HALT") == 0) {
+      return handle_HALT(cpu, src, dest);
+    }
+
+    if (strcmp(instr->mnemonic, "PUSH") == 0) {
+      return handle_PUSH(cpu, src);
+    }
+
+    if (strcmp(instr->mnemonic, "POP") == 0) {
+      return handle_POP(cpu, dest);
+    }
+
+    if (strcmp(instr->mnemonic, "ALLOC") == 0) {
+      return alloc_es_segment(cpu);
+    }
+
+    if (strcmp(instr->mnemonic, "FREE") == 0) {
+      return free_es_segment(cpu);
+    }
+
+    return EXIT_FAILURE;
+
+}
+
+int execute_instructions(CPU* cpu, Instruction* instr) {
+	if (!cpu || !instr) {
+          fprintf(stderr, "Erreur dans les parametres\n");
+          return EXIT_FAILURE;
+	}
+
+
+
+
+
+
+
+
+
+
+
+}
+
+
+/*-------------------------*/
+/* Fonctions auxiliaires*/
+/*-------------------------*/
+
+int handle_ADD(CPU* cpu, void* src, void* dest){
+	if (!cpu || !src || !dest) {
+          fprintf(stderr, "Erreur dans les parametres\n");
+          return EXIT_FAILURE;
+	}
+
+    int* destInt = (int*)dest;
+
+    int* srcVal = load(cpu->memory_handler, "CS", *(int*)src);
+	int* destVal = load(cpu->memory_handler, "CS", *(int*)dest);
+
+     store(cpu->memory_handler, "CS", *(int*)srcVal, *(int*)destVal);
+
+
+}
+
+int handle_CMP(CPU* cpu, void* src, void* dest);
+
+int handle_JMP(CPU* cpu, void* src, void* dest);
+
+int handle_JZ(CPU* cpu, void* src, void* dest);
+
+int handle_JNZ(CPU* cpu, void* src, void* dest);
+
+int handle_HALT(CPU* cpu, void* src, void* dest);
+
+int handle_PUSH(CPU* cpu, void* src);
+
+int handle_POP(CPU* cpu, void* dest);

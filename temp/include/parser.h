@@ -36,7 +36,7 @@ void free_parser_result(ParserResult* p);
 char* trim(char* str);
 
 /* Pre-traitement d'une ligne de .CODE */
-int search_and_replace(char* str, HashMap* values);
+int search_and_replace(char** str, HashMap* values);
 
 /*------------------------*/
 /* Fonctions auxiliaires */
