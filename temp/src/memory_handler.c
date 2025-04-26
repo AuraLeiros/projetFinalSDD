@@ -3,7 +3,7 @@
 
 MemoryHandler* memory_init(int size) {
     if (size <= 0){
-        fprintf(stderr, "La taille passe en parametre est invalide");
+        fprintf(stderr, "La taille passe en parametre est invalide\n");
         return NULL;
     }
 
@@ -80,12 +80,12 @@ int create_segment(MemoryHandler* handler, const char* name, int start, int size
     }
 
 
-    /* Verifier qu'il existe un segment libre suffisante */
+    /* Verifier qu'il existe un segment libre suffisant */
     Segment* prev = NULL;
 
     Segment* seg = find_free_segment(handler, start, size, &prev);
     if (!seg){
-        fprint(stderr, "Il n'y a pas de memoire libre suffisante\n");
+        fprintf(stderr, "Il n'y a pas de memoire libre suffisante\n");
         goto erreur;
     }
 
@@ -98,48 +98,39 @@ int create_segment(MemoryHandler* handler, const char* name, int start, int size
 
     /* Insertion dans le HashMap */
     if (hashmap_insert(handler->allocated, name, new_seg) == EXIT_FAILURE){
-        fprint(stderr, "Erreur dans la gestion de la memoire\n");
+        fprintf(stderr, "Erreur dans la gestion de la memoire\n");
         goto erreur;
     }
 
-    /* Cas 1 : Le segment libre commence au meme endroit */
-    if (seg->start == start){
-        if (prev) {
+    /* On doit considerer tous les cas pour l'allocation de memoire */
+    /* cas 1: le segment a allouer passe parfaitement dans un segment de la free_list */
+    if (seg->start == start && seg->size == size) {
+        if (prev){
             prev->next = seg->next;
-            if (seg->next) seg->next->start -= (seg->next->start) - (seg->start + size);
         } else {
             handler->free_list = seg->next;
-            if (seg->next) seg->next->start = 0;
         }
-
-        return EXIT_SUCCESS;
-
+    }
+    /* cas 2: le segment a inserer commence au meme indice que le segment de la free_list */
+    else if (seg->start == start){
+        seg->start = start + size;
+        seg->size -= size;
+    }
+    /* cas 3: le segment a inserer fini au meme indice que le segment libre */
+    else if (seg->start + seg->size == start + size){
+        seg->size -= size;
+    }
+    /* cas 4: le segment a inserer est au milieu du segment libre */
+    else {
+        Segment* tmp = seg;
+        tmp->start = start + size;
+        tmp->size = seg->size + seg->start - tmp->start;
+        seg->size -= (size + tmp->size);
+        seg->next = tmp;
     }
 
-    /* Cas 2: Le segment libre commence a la moitie du segment libre */
-    if (seg->start != start) {
-        if (!prev){
-            /* On doit creer un nouveau segment */
-            Segment* s = nouveau_segment(0, start);
-            if (!s) {
-                fprintf(stderr, "Erreur dans la creation d'un nouveau segment\n");
-                goto erreur;
-            }
-
-            s->next = seg->next;
-            handler->free_list = s;
-        } else {
-            prev->size += (start - (prev->size));
-        }
-
-        seg->next->start -= (seg->next->start) - (start + size);
-
-        return EXIT_SUCCESS;
-    }
-
-    printf(stderr, "Le segment n'a pas pu etre retire\n");
-    
-    return EXIT_FAILURE;
+    fprintf(stderr, "Le segment a bien ete cree et insere dans la memoire\n");
+    return EXIT_SUCCESS;
 
     erreur:
         if (new_seg) free(new_seg);
@@ -156,7 +147,7 @@ int remove_segment(MemoryHandler* handler, const char* name) {
     /* Recherche et effacement du segment dans le HashMap */
     Segment* seg = hashmap_get(handler->allocated, name);
     if (!seg) {
-        fprintf(stderr, "Le segment %s n'est pas present dans le MemoryHandler", name);
+        fprintf(stderr, "Le segment %s n'est pas present dans le MemoryHandler\n", name);
         return EXIT_SUCCESS; // Il n'existe pas, donc rien à modifier
     }
 
@@ -164,15 +155,65 @@ int remove_segment(MemoryHandler* handler, const char* name) {
         fprintf(stderr, "Erreur dans l'effacement du segment dans le HashMap\n");
         return EXIT_FAILURE;
     }
+    /* Reliberation du segment dans la free_list (en fait une reinsertion qui code pour de l'espace libre) */
+    Segment* tmp = handler->free_list;
+    /* Creation de deux pointeurs un vers le segment avant et l'autre vers celui apres le segment a reinserer */
+    Segment *prev, *suiv = NULL;
+    while (tmp->start < seg->start) {
+        prev = tmp;
+        suiv = tmp->next;
+        tmp = tmp->next;
+    }
 
-    /* !! A FAIRE !! */
+    /* On doit se charger de 4 cas de reinsertion d'un segment dans la free_list */
+    /* cas 1: le segment se colle directement aux limites de prev et suiv, il faut donc les fusionner */
+    if (prev->start + prev->size == seg->start && suiv->start == seg->start + seg->size) {
+        prev->next = suiv->next;
+        prev->size += seg->size + suiv->size;
+        free(suiv); free(seg);
+    }
+    /* cas 2: le segment doit etre fusionne avec prev mais ne touche pas aux limites de suiv */
+    else if (prev->start + prev->size == seg->start) {
+        prev->size += seg->size;
+        free(seg);
+    }
+    /* cas 3: le segment doit eytre fusionne avec suiv et commence quelque part apres la fin de prev */
+    else if (suiv->start == seg->start + seg->size) {
+        suiv->start = seg->start;
+        suiv->size += seg->size;
+        free(seg);
+    }
+    /* cas 4: le segment s'insere sans fusion */
+    else {
+        prev->next = seg;
+        seg->next = suiv;
+    }
+
+    fprintf(stderr, "Le segment a été supprimé avec succès et la mémoire a été relibérée.\n");
+    return EXIT_SUCCESS;
+
 } 
 
 
 
-/* ------------------------ */
-/* - Fonctions auxiliaires -*/
-/* ------------------------ */
+/* ------------------------- */
+/* - Fonctions auxiliaires - */
+/* ------------------------- */
+
+void remove_free_list(Segment* s){
+    if (!s) return;
+
+    Segment* idx = s;
+    Segment* suiv = NULL;
+
+    while (idx){
+        suiv = idx->next;
+        free(idx);
+        idx = suiv;
+    }
+
+    return;
+}
 
 void remove_memory_handler(MemoryHandler* m){
     if (!m) return;
@@ -193,22 +234,7 @@ void remove_memory_handler(MemoryHandler* m){
     return;
 }
 
-
-void free_liste_segment(Segment* s){
-    if (!s) return;
-
-    Segment* idx = s;
-    Segment* suiv = NULL;
-
-    while (idx){
-        suiv = idx->next;
-        free(idx);
-        idx = suiv;
-    }
-
-    return;
-}
-
+/* Pour allouer et initialiser un segment */
 Segment* nouveau_segment(int start, int size){
     if ((start < 0) || (size <= 0)){
         fprintf(stderr, "");

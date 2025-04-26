@@ -39,19 +39,19 @@ void allocate_variables(CPU* cpu, Instruction** data_instructions, int data_coun
 /* Teste une expression reguliere */
 int matches(const char *pattern, const char *string);
 
-/* Traitement d'un operand avec inmediate addressing, retourne un pointeur a la memoire */
-void* inmediate_addressing(CPU* cpu, const char* operand);
+/* Traitement d'une operande avec immediate addressing, retourne un pointeur a la memoire */
+void* immediate_addressing(CPU* cpu, const char* operand);
 
-/* Traitement d'un operand avec register addressing */
+/* Traitement d'une operande avec register addressing, retourne le registre s'il existe dans le contexte */
 void* register_addressing(CPU* cpu, const char* operand);
 
-/* Traitement d'un operand avec le memory_direct_addressing */
+/* Traitement d'une operande avec le memory_direct_addressing, donc chercher directement a la position donnee en operande dans le DS */
 void* memory_direct_addressing(CPU* cpu, const char* operand);
 
-/* Traitement d'un operand avec un register_indirect_addressing */
+/* Traitement d'une operande avec un register_indirect_addressing */
 void* register_indirect_addressing(CPU* cpu, const char* operand);
 
-/* Teste tous les methodes d'adressage et retourne une valeur */
+/* Teste toutes les methodes d'adressage et retourne une valeur */
 void* resolve_addressing(CPU* cpu, const char* operand);
 
 
@@ -59,7 +59,7 @@ void* resolve_addressing(CPU* cpu, const char* operand);
 /* Simulation de l'instruction assambleur MOV */
 void handle_MOV(CPU* cpu, void* src, void* dest);
 
-/* Fonctionn donne pour mettre en place l'environnement */
+/* Fonction donnée pour mettre en place l'environnement */
 CPU* setup_test_environment();
 
 

@@ -9,7 +9,6 @@ CPU* cpu_init(int memory_size){
     CPU* cpu = NULL;
     MemoryHandler* mh = NULL;
     HashMap* contextHM = NULL;
-    HashMap* poolHM = NULL;
     HashMap* constant_pool = NULL;
     const char* reg[] = {"AX", "BX", "CX", "DX", "IP", "ZF", "SF"};;
     int numReg = 7;
@@ -63,7 +62,7 @@ CPU* cpu_init(int memory_size){
     /* Relier les structures au CPU */
     cpu->memory_handler = mh;
     cpu->context = contextHM;
-    cpu->constant_pool = poolHM;
+    cpu->constant_pool = constant_pool;
 
     return cpu;
 
@@ -209,23 +208,24 @@ void print_data_segment(CPU* cpu) {
         fprintf(stderr, "Erreur dans les parametres\n");
         return;
     }
-
+    /* Accès au segment DS dans le memory-handler dans la liste allouée */
     Segment* s = (Segment*)hashmap_get(cpu->memory_handler->allocated, "DS");
     if (!s){
-        fprintf(stderr, "Le segment DS n'est pas present\n");
+        fprintf(stderr, "Le segment DS n'est pas present.\n");
         return;
     }
 
 
     int start = s->start;
     int end = s->size - s->start;
-
-    for (int x=start; x < end; x++) printf("%d\t", cpu->memory_handler->memory[x]);
+    /* on utilise %p pour pouvoir printf une variable de type void* */
+    for (int x=start; x < end; x++) printf("%p\t", cpu->memory_handler->memory[x]);
     printf("\n");
 
     return;
 }
 
+/* fonction donnee */
 int matches(const char *pattern, const char *string) {
 
     regex_t regex;
@@ -242,7 +242,7 @@ int matches(const char *pattern, const char *string) {
 }
 
 
-void* inmediate_addressing(CPU* cpu, const char* operand){
+void* immediate_addressing(CPU* cpu, const char* operand){
     if (!cpu || (!operand || operand[0] == '\0')){
         fprintf(stderr, "Erreur dans les parametres\n");
         return NULL;
@@ -250,11 +250,12 @@ void* inmediate_addressing(CPU* cpu, const char* operand){
 
     int* val = NULL;
     int* num;
-
+    /* utilisation du regex pour tester si l'operande est du bon format pour un addressage immediat */
     if (matches("^[0-9]+$", operand)) {
         val = (int*)hashmap_get(cpu->constant_pool, operand);
 
         if (!val){
+            /* stockage de la valeur de l'operande pour l'inserer dans le constant_pool */
             num = (int*)malloc(sizeof(int));
             *num = atoi(operand);
 
@@ -262,6 +263,7 @@ void* inmediate_addressing(CPU* cpu, const char* operand){
                 return num;
             }
         }
+        else return val;
     }
 
     return NULL;
@@ -297,7 +299,7 @@ void* memory_direct_addressing(CPU* cpu, const char* operand) {
 
     int valReg;
     
-    if (matches("^\[[0-9]+\]", operand)){
+    if (matches("^\\[[0-9]+\\]", operand)){
 
         if (!(sscanf(operand, "[%d]", &valReg) == 1)) {
             fprintf(stderr, "Erreur dans la lecture de la valeur\n");
@@ -311,8 +313,6 @@ void* memory_direct_addressing(CPU* cpu, const char* operand) {
 }
 
 
-
-
 void* register_indirect_addressing(CPU* cpu, const char* operand) {
     if (!cpu || (!operand || operand[0] == '\0')){
         fprintf(stderr, "Erreur dans les parametres\n");
@@ -322,19 +322,19 @@ void* register_indirect_addressing(CPU* cpu, const char* operand) {
     char tmp[ASSEMBLER_MAX_BUFFER];
     int* valReg = NULL;
 
-    if (matches("^\[[A-D]X\]$", operand)){
+    if (matches("^\\[[A-D]X\\]$", operand)){
 
         if (!(sscanf(operand, "[%s]", tmp) == 1)) {
             fprintf(stderr, "Erreur dans la lecture du registre\n");
             return NULL;
         }
-
+		/* chercher la valeur du registre dans le context */
         valReg = (int*)hashmap_get(cpu->context, tmp);
         if (!valReg) {
             fprintf(stderr, "Erreur dans la lecture du registe\n");
             return NULL;
         }
-
+		/* charger les instructions du registre dans le memory_handler */
         return load(cpu->memory_handler, "DS", (*valReg));
     }
 
@@ -394,7 +394,7 @@ void* resolve_addressing(CPU* cpu, const char* operand) {
         return NULL;
     }
 
-    void* a = inmediate_addressing(cpu, operand);
+    void* a = immediate_addressing(cpu, operand);
     if (a) return a;
 
     void* b = register_addressing(cpu, operand);
@@ -406,7 +406,7 @@ void* resolve_addressing(CPU* cpu, const char* operand) {
     void* d = register_indirect_addressing(cpu, operand);
     if (d) return d;
 
-    fprintf(stderr, "Le operand ne correspond pas a aucun des methodes d'addressage\n");
+    fprintf(stderr, "L'operande ne correspond à aucune des methodes d'addressage\n");
     return NULL;
 
 }

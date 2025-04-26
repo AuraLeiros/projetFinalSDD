@@ -37,6 +37,6 @@ int remove_segment(MemoryHandler* handler, const char* name);
 
 void remove_memory_handler(MemoryHandler* m);
 
-void remove_free_list(Segment* seg) 
+void remove_free_list(Segment* seg);
 
 #endif //MEMORY_HANDLER_H
