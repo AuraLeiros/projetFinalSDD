@@ -421,7 +421,7 @@ int resolve_constants(ParserResult* result) {
     /* Iteration sur tous les lignes de .CODE */
     for (int i=0; i < result->code_count; i++) {
         if (result->code_instructions[i]->operand2) {
-            if (!search_and_replace(((result->code_instructions[i]->operand2)), result->memory_locations)){
+            if (!search_and_replace((&(result->code_instructions[i]->operand2)), result->memory_locations)){
                 fprintf(stderr, "Erreur dans le reemplacement\n");
                 return EXIT_FAILURE;
             }
@@ -461,7 +461,7 @@ void allocate_code_segment(CPU* cpu, Instruction** code_instructions, int code_c
     }
 
     /* On insere le segment CS juste après le segment DS donc à une valeur de start egale a la taille de DS */
-    Segment* dataSeg = hashmap_get(cpu->context, "DS");
+    Segment* dataSeg = (Segment*)hashmap_get(cpu->context, "DS");
 
 	/* Creer un nouveau Segment pour le CS */
     if (!create_segment(cpu->memory_handler, "CS", (dataSeg->start + dataSeg->size + 1), code_count)){
@@ -492,7 +492,7 @@ void allocate_code_segment(CPU* cpu, Instruction** code_instructions, int code_c
 
     }
 
-    int* IP = hashmap_get(cpu->context, "IP");
+    int* IP = (int*)hashmap_get(cpu->context, "IP");
     if (!IP) {
       fprintf(stderr, "Le registre n'existe pas\n");
       return;
@@ -506,6 +506,8 @@ int handle_instructions(CPU* cpu, Instruction* instr, void* src, void* dest) {
           fprintf(stderr, "Erreur dans les parametres\n");
           return EXIT_FAILURE;
 	}
+
+    /* TODO see if for yhe JMP, JZ is src or dest*/
 
     if (strcmp(instr->mnemonic, "MOV") == 0) {
       handle_MOV(cpu, src, dest);
@@ -521,7 +523,7 @@ int handle_instructions(CPU* cpu, Instruction* instr, void* src, void* dest) {
     }
 
     if (strcmp(instr->mnemonic, "JMP") == 0) {
-      return handle_JMP(cpu, src, dest);
+      return handle_JMP(cpu, src);
     }
 
     if (strcmp(instr->mnemonic, "JZ") == 0) {
@@ -562,6 +564,34 @@ int execute_instructions(CPU* cpu, Instruction* instr) {
           return EXIT_FAILURE;
 	}
 
+    void* src = NULL;
+    void* dest = NULL;
+
+    /* Traitement de la src */
+    if (instr->operand1) {
+        src = resolve_addressing(cpu, instr->operand1);
+        if (!src) {
+            fprintf(stderr, "Erreur lors de la resolution d'operand1\n");
+            return EXIT_FAILURE;
+        }
+    } else {
+        src = resolve_addressing(cpu, instr->mnemonic);
+        return handle_instructions(cpu, instr, NULL, NULL);
+    }
+
+    /* Traitement du dest, s'il existe*/
+    dest = resolve_addressing(cpu, instr->operand2);
+    if (!dest) {
+        fprintf(stderr, "Erreur lors de la resolution de l'operand2");
+    }
+
+    return handle_instructions(cpu, instr, src, dest);
+}
+
+
+
+
+
 
 
 
@@ -579,31 +609,133 @@ int execute_instructions(CPU* cpu, Instruction* instr) {
 /* Fonctions auxiliaires*/
 /*-------------------------*/
 
+/* Pour les fonctions auxiliaires, on assume que les pointeurs sont des (int*) et directes
+i.e. on a pas besoin de recuperer d\ un registre */
+
 int handle_ADD(CPU* cpu, void* src, void* dest){
 	if (!cpu || !src || !dest) {
           fprintf(stderr, "Erreur dans les parametres\n");
           return EXIT_FAILURE;
 	}
 
-    int* destInt = (int*)dest;
+    /* On ajoute la source a la destination */
+    *(int*)dest += *(int*)src;
 
-    int* srcVal = load(cpu->memory_handler, "CS", *(int*)src);
-	int* destVal = load(cpu->memory_handler, "CS", *(int*)dest);
-
-     store(cpu->memory_handler, "CS", *(int*)srcVal, *(int*)destVal);
-
+    return EXIT_SUCCESS;
 
 }
 
-int handle_CMP(CPU* cpu, void* src, void* dest);
+int handle_CMP(CPU* cpu, void* src, void* dest) {
+    if (!cpu || !src || !dest) {
+        fprintf(stderr, "Erreur dans les parametres\n");
+        return EXIT_FAILURE;
+    }
 
-int handle_JMP(CPU* cpu, void* src, void* dest);
+    int destCopy = *(int*)dest;
+    int srcCopy = *(int*)src;
+    int diff = destCopy - srcCopy;
 
-int handle_JZ(CPU* cpu, void* src, void* dest);
+    /* Obtention des registres */
+    int* ZF = (int*)hashmap_get(cpu->context, "ZF");
+    int* SF = (int*)hashmap_get(cpu->context, "SF");
 
-int handle_JNZ(CPU* cpu, void* src, void* dest);
+    /* Validation des parametres*/
+    if ((diff == 0 && !ZF) || (diff > 0 && !SF)) {
+        return EXIT_FAILURE;
+    }
 
-int handle_HALT(CPU* cpu, void* src, void* dest);
+    /* M-A-J */
+    if (diff == 0) {
+        if (ZF) {
+            *ZF = 1;
+        }
+    } else if (diff > 0) {
+        if (SF) {
+            *SF = 1;
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
+int handle_JMP(CPU* cpu, void* src){
+    if (!cpu || !src) {
+        fprintf(stderr, "Erreur dans les parametres\n");
+        return EXIT_FAILURE;
+    }
+
+    /* M-A-J du registre IP avec le source */
+    if (!hashmap_insert(cpu->context, "IP", src)) {
+        fprintf(stderr, "Erreur dans la M-A-J du registre IP\n");
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
+}
+
+int handle_JZ(CPU* cpu, void* src) {
+    if (!cpu || !src) {
+        fprintf(stderr, "Erreur dans les parametres\n");
+        return EXIT_FAILURE;
+    }
+
+    int* ZF = (int*)hashmap_get(cpu->context, "ZF");
+    if (!ZF){
+        fprintf(stderr, "Erreur dans la recuperation du registre\n");
+        return EXIT_FAILURE;
+    }
+
+    if ((*ZF) == 1) {
+        if (!hashmap_insert(cpu->context, "IP", src)) {
+            fprintf(stderr, "Erreur dans la substitution dans le registre IP\n");
+            return EXIT_FAILURE;
+        }
+    }
+    
+    return EXIT_SUCCESS;
+
+}
+
+int handle_JNZ(CPU* cpu, void* src, void* dest) {
+    if (!cpu || !src) {
+        fprintf(stderr, "Erreur dans les parametres\n");
+        return EXIT_FAILURE;
+    }
+
+    int* ZF = (int*)hashmap_get(cpu->context, "ZF");
+    if (!ZF){
+        fprintf(stderr, "Erreur dans la recuperation du registre\n");
+        return EXIT_FAILURE;
+    }
+
+    if ((*ZF) == 0) {
+        if (!hashmap_insert(cpu->context, "IP", src)) {
+            fprintf(stderr, "Erreur dans la substitution dans le registre IP\n");
+            return EXIT_FAILURE;
+        }
+    }
+    
+    return EXIT_SUCCESS;
+}
+
+int handle_HALT(CPU* cpu) {
+    if (!cpu) {
+        fprintf(stderr, "Erreur dans les parametres\n");
+        return EXIT_FAILURE;
+    }
+
+    int* IP = (int*)hashmap_get(cpu->context, "IP");
+    Segment* seg = (Segment*)hashmap_get(cpu->memory_handler->allocated, "CS");
+
+    if (IP && seg) {
+        *IP = (seg->start) + (seg->size);
+        return EXIT_SUCCESS;
+    }
+
+    fprintf(stderr, "Erreur\n");
+    return EXIT_FAILURE;
+
+}
 
 int handle_PUSH(CPU* cpu, void* src);
 
