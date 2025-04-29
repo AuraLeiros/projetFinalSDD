@@ -10,7 +10,7 @@ CPU* cpu_init(int memory_size){
     MemoryHandler* mh = NULL;
     HashMap* contextHM = NULL;
     HashMap* constant_pool = NULL;
-    const char* reg[] = {"AX", "BX", "CX", "DX", "IP", "ZF", "SF"};;
+    const char* reg[] = {"AX", "BX", "CX", "DX", "IP", "ZF", "SF"};
     int numReg = 7;
     int* val = NULL;
 
@@ -608,7 +608,7 @@ Instruction* fetch_next_instruction(CPU* cpu) {
 
     /* Recuperer l'instruction */
     Instruction* res = (Instruction*)load(cpu->memory_handler, "CS", (*IP));
-    if (res) {
+    if (!res) {
         fprintf(stderr, "Erreur dans la recuperation de l'instruction\n");
         return NULL;
     }
@@ -618,6 +618,8 @@ Instruction* fetch_next_instruction(CPU* cpu) {
 
     return res;
 }
+
+
 
 
 
@@ -760,3 +762,46 @@ int handle_HALT(CPU* cpu) {
 int handle_PUSH(CPU* cpu, void* src);
 
 int handle_POP(CPU* cpu, void* dest);
+
+
+void affichageCPU(CPU* cpu) {
+    if (!cpu) {
+        fprintf(stderr, "Erreur dans la lecture d'un CPU\n");
+        return;
+    }
+
+    const char* reg[] = REGISTERS;
+
+    printf("Affichage des registres :\n\n");
+
+    for (int x=0; x < NUMREG; x++){
+        int* val = (int*)hashmap_get(cpu->context, reg[x]);
+        if (!val) {
+            fprintf(stderr, "Erreur dans la lecture du registre %s\n", reg[x]);
+            return;
+        }
+
+        printf("Register : %s\tValue : %d\n", reg[x], *val);
+    }
+
+    printf("Affichage du segment de donnes :\n\n");
+
+    Segment* DS = (Segment*)hashmap_get(cpu->memory_handler->allocated, "DS");
+    if (!DS){
+        fprintf(stderr, "Le segment de donnes n'a pas ete retrouve\n");
+        return;
+    }
+
+    for (int x=0; x < (DS->size + DS->start); x++){
+        Instruction* i = (Instruction*)cpu->memory_handler->memory[x];
+        if (i) {
+            printf("Instruction %d", x);
+            if (i->mnemonic) printf("%s ", i->mnemonic);
+            if (i->operand1) printf("%s ", i->operand1);
+            if (i->operand2) printf("%s\n", i->operand2);
+        }
+    }
+
+    return;
+
+}
