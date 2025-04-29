@@ -71,6 +71,11 @@ int handle_instructions(CPU* cpu, Instruction* instr, void* src, void* dest);
 
 int execute_instructions(CPU* cpu, Instruction* instr);
 
+/* Manipulation de la pile */
+int push_value(CPU* cpu, int value);
+
+int pop_value(CPU* cpu, int* dest);
+
 /*-------------------------*/
 /* Fonctions auxiliaires*/
 /*-------------------------*/

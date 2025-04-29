@@ -62,8 +62,8 @@ CPU* cpu_init(int memory_size){
     cpu->context = contextHM;
     cpu->constant_pool = constant_pool;
 
-    Segment* ss = nouveau_segment(SS_START, SS_SIZE);
-    if (!hashmap_insert(cpu->memory_handler->allocated, "SS", (void*)ss)) {
+    /* Creation du segment de pile dans le memory_handler */
+    if (!create_segment(cpu->memory_handler, "SS", SS_START, SS_SIZE)) {
         fprintf(stderr, "Erreur dans la creation du stack segment.\n");
         goto erreur;
     }
@@ -98,16 +98,16 @@ void* store(MemoryHandler* handler, const char* segment_name, int pos, void* dat
         return NULL;
     }
 
-    /* Verification de que segment_name est allouée*/
+    /* Verification que le segment est alloué */
     Segment* s = (Segment*)hashmap_get(handler->allocated, segment_name);
     if (!s) {
         fprintf(stderr, "Le segment n'a pas ete trouve dans le tableau de memoire allouee\n");
         return NULL;
     }
 
-    /* Verification de que la position est dans le rang */
-    if ((s->start + s->size) <= (s->start + pos)) {
-        fprintf(stderr, "Il a pas de place\n");
+    /* Verification que la position est dans le rang */
+    if ((s->size < pos) || (pos < s->start)){
+        fprintf(stderr, "Il n'y a plus de place dans le segment ou la position est hors des bords\n");
         return NULL;
     }
 
@@ -620,8 +620,77 @@ Instruction* fetch_next_instruction(CPU* cpu) {
     return res;
 }
 
+/* TODO TODO TODO */
+/* ADD YOUR FUNCTIONS PLEASE!!!!!!!!!! */
+/* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
 
 
+/* Manipulation de la pile */
+int push_value(CPU* cpu, int value) {
+    if (!cpu) {
+      fprintf(stderr, "Erreur dans les parametres\n");
+      return EXIT_FAILURE;
+    }
+    /* Chargement du registre SP qui contient le dernier indice rempli de la pile */
+    int* SP = (int*)hashmap_get(cpu->context, "SP");
+    if (!SP) {
+      fprintf(stderr, "Erreur dans la lecture des registres\n");
+      return EXIT_FAILURE;
+    }
+    /* Cas de depassement de la taille de la pile */
+    if ((*SP) < 0){
+      fprintf(stderr, "Stack underflow\n");
+      return -1;
+    }
+    else if ((*SP) > SS_SIZE){
+      fprintf(stderr, "Stack overflow\n");
+      return EXIT_FAILURE;
+    }
+    /* Nouveau pointeur vers la valeur a inserer*/
+    int* val = (int*)malloc(sizeof(int));
+    if (!val) {
+      fprintf(stderr, "Erreur dans l'allocation d'un nouveau pointeur\n");
+      return EXIT_FAILURE;
+    }
+    *val = value;
+    /* Insertion du pointeur dans la memoire */
+    if (store(cpu->memory_handler, "SS", *SP, (void*)val) != (void*)val){
+      fprintf(stderr, "La valeur n'a pas pu etre mise dans la pile\n");
+      return EXIT_FAILURE;
+    }
+    /* Nouvelle position du sommet de la pile */
+    (*SP)--;
+
+    return EXIT_SUCCESS;
+}
+
+int pop_value(CPU* cpu, int* dest){
+  if (!cpu || !dest) {
+    fprintf(stderr, "Erreur dans les parametres\n");
+    return EXIT_FAILURE;
+  }
+
+  int* SP = (int*)hashmap_get(cpu->context, "SP");
+  if (!SP) {
+     fprintf(stderr, "Erreur dans la lecture des registres\n");
+     return EXIT_FAILURE;
+  }
+  /* Cas de depassement de la taille de la pile */
+  if ((*SP) < 0){
+      fprintf(stderr, "Stack underflow\n");
+      return -1;
+  }
+  else if ((*SP) > SS_SIZE){
+      fprintf(stderr, "Stack overflow\n");
+      return EXIT_FAILURE;
+  }
+  /* Chargement de la valeur au sommet de la pile */
+  dest = (int*)load(cpu->memory_handler, "SS", (*SP));
+  /* Nouvelle position du sommet de la pile */
+  (*SP)++;
+
+  return EXIT_SUCCESS;
+}
 
 
 
@@ -746,6 +815,32 @@ int handle_HALT(CPU* cpu) {
 
 }
 
-int handle_PUSH(CPU* cpu, void* src);
+int handle_PUSH(CPU* cpu, void* src){
+    if (!cpu) {
+      fprintf(stderr, "Erreur dans les parametres\n");
+      return EXIT_FAILURE;
+    }
 
-int handle_POP(CPU* cpu, void* dest);
+    /* Cas ou on ne donne aucun registre specifique */
+    if (!src){
+        int* AX = (int*)hashmap_get(cpu->context, "AX");
+        return push_value(cpu, *AX);
+    }
+
+    return push_value(cpu, *(int*)src);
+}
+
+int handle_POP(CPU* cpu, void* dest){
+    if (!cpu) {
+        fprintf(stderr, "Erreur dans les parametres\n");
+        return EXIT_FAILURE;
+    }
+
+    /* Cas ou on ne donne aucun registre specifique */
+    if (!dest){
+        int* AX = (int*)hashmap_get(cpu->context, "AX");
+        return pop_value(cpu, AX);
+    }
+
+    return push_value(cpu, *(int*)dest);
+}

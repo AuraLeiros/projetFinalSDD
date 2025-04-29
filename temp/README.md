@@ -49,3 +49,8 @@ Aura Leirós García
  - Exercice 5.7
  - Check the implementation of the Q.5.4 (in cpu.c)
  - check backslash regex
+
+
+ #EXTRA NOTES
+ - the segment SS has to be in the memory, else that push pop is nearly impossible.
+ - no idea how to solve the "positionné sous le segment de données"....
