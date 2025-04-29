@@ -10,8 +10,7 @@ CPU* cpu_init(int memory_size){
     MemoryHandler* mh = NULL;
     HashMap* contextHM = NULL;
     HashMap* constant_pool = NULL;
-    const char* reg[] = {"AX", "BX", "CX", "DX", "IP", "ZF", "SF"};;
-    int numReg = 7;
+    const char* reg[] = REGISTERS;
     int* val = NULL;
 
     /* Allocation d'un nouveau CPU*/
@@ -43,8 +42,7 @@ CPU* cpu_init(int memory_size){
     }
 
     /* Ajout des registres dans les HashMap */
-
-    for (int x=0; x < numReg; x++) {
+    for (int x = 0; x < NUM_REGISTERS; x++) {
         val = (int*)malloc(sizeof(int));
         if (!val) {
             fprintf(stderr, "Erreur dans l'allocation memoire d'un val\n");
@@ -64,6 +62,12 @@ CPU* cpu_init(int memory_size){
     cpu->context = contextHM;
     cpu->constant_pool = constant_pool;
 
+    Segment* ss = nouveau_segment(SS_START, SS_SIZE);
+    if (!hashmap_insert(cpu->memory_handler->allocated, "SS", (void*)ss)) {
+        fprintf(stderr, "Erreur dans la creation du stack segment.\n");
+        goto erreur;
+    }
+
     return cpu;
 
     erreur:
@@ -73,8 +77,6 @@ CPU* cpu_init(int memory_size){
         if (cpu) free(cpu);  // not cpu_destroy, since subfields are already cleaned up
         return NULL;
 }
-
-
 
 void cpu_destroy(CPU* cpu){
     if (!cpu) return;
@@ -409,7 +411,6 @@ void* resolve_addressing(CPU* cpu, const char* operand) {
 
     fprintf(stderr, "L'operande ne correspond à aucune des methodes d'addressage\n");
     return NULL;
-
 }
 
 int resolve_constants(ParserResult* result) {
@@ -601,14 +602,14 @@ Instruction* fetch_next_instruction(CPU* cpu) {
     if (!IP || !seg) {
         fprintf(stderr, "Erreur dans la lecture des registres\n");
         return NULL;
-    } else if ( (*IP) > (seg->start + seg->size + 1)){
+    } else if ((*IP) > (seg->start + seg->size)){
         fprintf(stderr, "La valeur d'IP est depasssez\n");
         return NULL;
     }
 
     /* Recuperer l'instruction */
     Instruction* res = (Instruction*)load(cpu->memory_handler, "CS", (*IP));
-    if (res) {
+    if (!res) {
         fprintf(stderr, "Erreur dans la recuperation de l'instruction\n");
         return NULL;
     }

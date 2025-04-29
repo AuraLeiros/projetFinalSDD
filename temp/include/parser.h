@@ -46,6 +46,9 @@ int search_and_replace(char** str, HashMap* values);
 /* Alloue et initialise une nouvelle instruction */
 Instruction* nouvelleInstruction(char* mnemonic, char* operand1, char* operand2);
 
+/* Alloue un nouveau parser */
+ParserResult* nouveauParser();
+
 /* Liberation de la memoire alloue a une instruction */
 void libererInstruction(Instruction* i);
 

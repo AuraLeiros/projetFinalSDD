@@ -237,71 +237,6 @@ void free_parser_result(ParserResult* p){
     return;
 }
 
-/*------------------------*/
-/* Fonctions auxiliaires */
-/*------------------------*/
-
-
-Instruction* nouvelleInstruction(char* mnemonic, char* operand1, char* operand2){
-
-    /* Allocation d'une nouvelle instruction */
-    Instruction* i = (Instruction*)malloc(sizeof(Instruction));
-    if (!i){
-        fprintf(stderr, "Erreur dans l'allocation mémoire d'une nouvelle instruction\n");
-        goto erreur;
-    }
-
-    i->mnemonic = strdup(mnemonic);
-    if (!i->mnemonic){
-        fprintf(stderr, "Erreur dans la copie du mnemonic\n");
-        goto erreur;
-    }
-
-    i->operand1 = strdup(operand1);
-    if (!i->operand1){
-        fprintf(stderr, "Erreur dans la copie de l'operand1\n");
-        goto erreur;
-    }
-
-    i->operand2 = strdup(operand2);
-    if (!i->operand2){
-        fprintf(stderr, "Erreur dans la copie de l'operand2\n");
-        goto erreur;
-    }
-
-    return i;
-
-    erreur:
-        if (i) libererInstruction(i);
-        return NULL;
-}
-
-/* Fonction auxiliaire pour liberer la mémoire d'une instruction */
-void libererInstruction(Instruction* i){
-    if (!i) return;
-
-    if (i->mnemonic) free(i->mnemonic);
-    if (i->operand1) free(i->operand1);
-    if (i->operand2) free(i->operand2);
-
-    free(i);
-
-    return;
-}
-
-char* trim(char* str) {
-    while (*str == ' ' || *str == '\t' || *str == '\n' || *str == '\r')
-        str++;
-
-    char *end = str + strlen(str) - 1;
-    while (end > str && (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r')) {
-        *end = '\0';
-        end--;
-    }
-
-    return str;
-}
-
 int search_and_replace(char** str, HashMap* values) {
     if (!str || !*str || !values) return 0;
 
@@ -353,19 +288,30 @@ int search_and_replace(char** str, HashMap* values) {
     return replaced;
 }
 
+char* trim(char* str) {
+    while (*str == ' ' || *str == '\t' || *str == '\n' || *str == '\r')
+        str++;
+
+    char *end = str + strlen(str) - 1;
+    while (end > str && (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r')) {
+        *end = '\0';
+        end--;
+    }
+
+    return str;
+}
 
 /*------------------------*/
-/* Fonctions auxiliaires  */
+/* Fonctions auxiliaires */
 /*------------------------*/
 
 
-/* Fonction auxiliaire pour allouer et initialiser une nouvelle instruction */
 Instruction* nouvelleInstruction(char* mnemonic, char* operand1, char* operand2){
 
     /* Allocation d'une nouvelle instruction */
     Instruction* i = (Instruction*)malloc(sizeof(Instruction));
     if (!i){
-        fprintf(stderr, "Erreur dans l'allocation mémoire d'une nouvelle instruction");
+        fprintf(stderr, "Erreur dans l'allocation mémoire d'une nouvelle instruction\n");
         goto erreur;
     }
 
@@ -377,20 +323,20 @@ Instruction* nouvelleInstruction(char* mnemonic, char* operand1, char* operand2)
 
     i->operand1 = strdup(operand1);
     if (!i->operand1){
-        fprintf(stderr, "Erreur dans la copie de l'operand1");
+        fprintf(stderr, "Erreur dans la copie de l'operand1\n");
         goto erreur;
     }
 
     i->operand2 = strdup(operand2);
     if (!i->operand2){
-        fprintf(stderr, "Erreur dans la copie de l'operand2");
+        fprintf(stderr, "Erreur dans la copie de l'operand2\n");
         goto erreur;
     }
 
     return i;
 
     erreur:
-        libererInstruction(i);
+        if (i) libererInstruction(i);
         return NULL;
 }
 
@@ -431,5 +377,17 @@ ParserResult* nouveauParser(){
         free_parser_result(parser);
         return NULL;
 
+}
+
+/* Fonction auxiliaire pour liberer la mémoire d'une instruction */
+void libererInstruction(Instruction* i){
+    if (!i) return;
+
+    if (i->mnemonic) free(i->mnemonic);
+    if (i->operand1) free(i->operand1);
+    if (i->operand2) free(i->operand2);
+
+    free(i);
+    return;
 }
 
