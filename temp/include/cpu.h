@@ -81,11 +81,11 @@ int handle_CMP(CPU* cpu, void* src, void* dest);
 
 int handle_JMP(CPU* cpu, void* src);
 
-int handle_JZ(CPU* cpu, void* src, void* dest);
+int handle_JZ(CPU* cpu, void* src);
 
-int handle_JNZ(CPU* cpu, void* src, void* dest);
+int handle_JNZ(CPU* cpu, void* srcs);
 
-int handle_HALT(CPU* cpu, void* src, void* dest);
+int handle_HALT(CPU* cpu);
 
 int handle_PUSH(CPU* cpu, void* src);
 

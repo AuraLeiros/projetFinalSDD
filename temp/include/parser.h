@@ -1,6 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include <string.h>
 #include "hachage.h"
 #include "macros.h"
 
