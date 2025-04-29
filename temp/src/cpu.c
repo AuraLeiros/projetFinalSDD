@@ -619,6 +619,25 @@ Instruction* fetch_next_instruction(CPU* cpu) {
     return res;
 }
 
+int run_program(CPU* cpu) {
+    if (!cpu) {
+        fprintf(stderr, "Erreur dans les parametres\n");
+        return EXIT_FAILURE;
+    }
+
+    /* Afficher l'etat initial */
+    affichageCPU(cpu);
+
+    /* Recuperer le segment de codes */
+    Segment* CS = (Segment*)hashmap_get(cpu->memory_handler->allocated, "CS");
+    if (!CS) {
+        fprintf(stderr, "Erreur dans la recuperation d'un segment de codes\n");
+        return EXIT_FAILURE;
+    }
+    
+    for (int x=0; x < (CS->size) )
+
+}
 
 
 
@@ -792,7 +811,7 @@ void affichageCPU(CPU* cpu) {
         return;
     }
 
-    for (int x=0; x < (DS->size + DS->start); x++){
+    for (int x=0; x < (DS->size); x++){
         Instruction* i = (Instruction*)cpu->memory_handler->memory[x];
         if (i) {
             printf("Instruction %d", x);
