@@ -173,7 +173,7 @@ ParserResult* parse(const char* filename){
 
             /* Parsing le .CODE*/
             case 1:
-                i = parser_code_instruction(line, parser->labels, parser->code_count);
+                i = parse_code_instructions(line, parser->labels, parser->code_count);
                 if (!i){
                     fprintf(stderr, "Erreur dans le parsing\n");
                     goto erreur;
@@ -319,7 +319,7 @@ int search_and_replace(char** str, HashMap* values) {
             if (substr) {
                 // Construct replacement buffer
                 char replacement[64];
-                snprintf(replacement, sizeof(replacement), "%d", value);
+                snprintf(replacement, sizeof(replacement), "%d", *value);
 
                 // Calculate lengths
                 int key_len = strlen(key);

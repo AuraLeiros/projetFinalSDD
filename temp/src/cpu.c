@@ -507,7 +507,7 @@ int handle_instructions(CPU* cpu, Instruction* instr, void* src, void* dest) {
           return EXIT_FAILURE;
 	}
 
-    /* TODO see if for yhe JMP, JZ is src or dest*/
+    /* Prise en charge par des fontions auxiliaires qui sont definies en bas pour chaque instruction */
 
     if (strcmp(instr->mnemonic, "MOV") == 0) {
       handle_MOV(cpu, src, dest);
@@ -527,15 +527,15 @@ int handle_instructions(CPU* cpu, Instruction* instr, void* src, void* dest) {
     }
 
     if (strcmp(instr->mnemonic, "JZ") == 0) {
-      return handle_JZ(cpu, src, dest);
+      return handle_JZ(cpu, src);
     }
 
     if (strcmp(instr->mnemonic, "JNZ") == 0) {
-      return handle_JNZ(cpu, src, dest);
+      return handle_JNZ(cpu, src);
     }
 
     if (strcmp(instr->mnemonic, "HALT") == 0) {
-      return handle_HALT(cpu, src, dest);
+      return handle_HALT(cpu);
     }
 
     if (strcmp(instr->mnemonic, "PUSH") == 0) {
@@ -575,8 +575,8 @@ int execute_instructions(CPU* cpu, Instruction* instr) {
             return EXIT_FAILURE;
         }
     } else {
-        src = resolve_addressing(cpu, instr->mnemonic);
-        return handle_instructions(cpu, instr, NULL, NULL);
+        dest = resolve_addressing(cpu, instr->mnemonic);
+        return handle_instructions(cpu, instr, src, dest);
     }
 
     /* Traitement du dest, s'il existe*/
@@ -660,7 +660,9 @@ int handle_CMP(CPU* cpu, void* src, void* dest) {
     int* SF = (int*)hashmap_get(cpu->context, "SF");
 
     /* Validation des parametres*/
-    if ((diff == 0 && !ZF) || (diff > 0 && !SF)) {
+    /* tester le diff pour verifier le si et seulement si */
+    if ((diff == 0 && !ZF) || (diff < 0 && !SF)) {
+        fprintf(stderr, "Erreur dans le chargement des registres.\n");
         return EXIT_FAILURE;
     }
 
@@ -669,7 +671,7 @@ int handle_CMP(CPU* cpu, void* src, void* dest) {
         if (ZF) {
             *ZF = 1;
         }
-    } else if (diff > 0) {
+    } else if (diff < 0) {
         if (SF) {
             *SF = 1;
         }
@@ -705,18 +707,11 @@ int handle_JZ(CPU* cpu, void* src) {
         return EXIT_FAILURE;
     }
 
-    if ((*ZF) == 1) {
-        if (!hashmap_insert(cpu->context, "IP", src)) {
-            fprintf(stderr, "Erreur dans la substitution dans le registre IP\n");
-            return EXIT_FAILURE;
-        }
-    }
-    
-    return EXIT_SUCCESS;
+    if ((*ZF) == 1) handle_JMP(cpu, src);
 
 }
 
-int handle_JNZ(CPU* cpu, void* src, void* dest) {
+int handle_JNZ(CPU* cpu, void* src) {
     if (!cpu || !src) {
         fprintf(stderr, "Erreur dans les parametres\n");
         return EXIT_FAILURE;
@@ -728,14 +723,7 @@ int handle_JNZ(CPU* cpu, void* src, void* dest) {
         return EXIT_FAILURE;
     }
 
-    if ((*ZF) == 0) {
-        if (!hashmap_insert(cpu->context, "IP", src)) {
-            fprintf(stderr, "Erreur dans la substitution dans le registre IP\n");
-            return EXIT_FAILURE;
-        }
-    }
-    
-    return EXIT_SUCCESS;
+    if ((*ZF) == 0) handle_JMP(cpu, src);
 }
 
 int handle_HALT(CPU* cpu) {
