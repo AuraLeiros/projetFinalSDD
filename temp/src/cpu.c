@@ -588,21 +588,41 @@ int execute_instructions(CPU* cpu, Instruction* instr) {
     return handle_instructions(cpu, instr, src, dest);
 }
 
+Instruction* fetch_next_instruction(CPU* cpu) {
+    if (!cpu) {
+        fprintf(stderr, "Erreur dans les parametres\n");
+        return NULL;
+    }
 
+    /* Charger les registres et le segment contentant les codes */
+    int* IP = (int*)hashmap_get(cpu->context, "IP");
+    Segment* seg = (Segment*)hashmap_get(cpu->memory_handler->allocated, "CS");
 
+    if (!IP || !seg) {
+        fprintf(stderr, "Erreur dans la lecture des registres\n");
+        return NULL;
+    } else if ( (*IP) > (seg->start + seg->size + 1)){
+        fprintf(stderr, "La valeur d'IP est depasssez\n");
+        return NULL;
+    }
 
+    /* Recuperer l'instruction */
+    Instruction* res = (Instruction*)load(cpu->memory_handler, "CS", (*IP));
+    if (res) {
+        fprintf(stderr, "Erreur dans la recuperation de l'instruction\n");
+        return NULL;
+    }
 
+    /* Mettre a jour le pointeur IP*/
+    (*IP)++;
 
-
-
-
-
-
-
-
-
-
+    return res;
 }
+
+
+
+
+
 
 
 /*-------------------------*/
