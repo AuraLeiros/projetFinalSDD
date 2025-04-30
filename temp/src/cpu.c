@@ -48,14 +48,22 @@ CPU* cpu_init(int memory_size){
             fprintf(stderr, "Erreur dans l'allocation memoire d'un val\n");
             goto erreur;
         }
-
-        *val = 0;
+        
+        if (strcmp(reg[x], "ES") == 0){
+            *val = -1;
+        } else {
+            *val = 0;
+        }
         
         if (!hashmap_insert(contextHM, reg[x], val)){
             fprintf(stderr, "Erreur dans l'insertion dans le HashMap\n");
             goto erreur;
         }
     }
+
+    /* Ajout du registre*/
+
+    /* Ajouter manuellement au */
 
     /* Relier les structures au CPU */
     cpu->memory_handler = mh;
@@ -350,10 +358,7 @@ void handle_MOV(CPU* cpu, void* src, void* dest){
         return;
     }
 
-    // TODO
-
-    memcpy(dest, src, sizeof(int));
-
+    *(int*)dest = *(int*)src;
 }
 
 CPU* setup_test_environment() {
@@ -408,6 +413,9 @@ void* resolve_addressing(CPU* cpu, const char* operand) {
 
     void* d = register_indirect_addressing(cpu, operand);
     if (d) return d;
+
+    void* e = segment_override_adressing(cpu, operand);
+    if (e) return e;
 
     fprintf(stderr, "L'operande ne correspond à aucune des methodes d'addressage\n");
     return NULL;
@@ -749,7 +757,188 @@ void* segment_override_adressing(CPU* cpu, const char* operand) {
         fprintf(stderr, "Erreur dans les parametres\n");
         return NULL;
     }
+
+    /* Valider l'expression d'addressage */
+    if (!matches("\\[([DCSE]S):([ABCD]X)\\]", operand)){
+        fprintf(stderr, "L'operand n'a pas la structure attendue\n");
+        return NULL;
+    }
+
+    char segname[8];
+    char regname[8];
+
+
+    /* Extraire le segment et le registre */
+    const char *colon = strchr(operand, ':');
+    const char *end_bracket = strchr(operand, ']');
+
+    if (operand[0] == '[' && colon && end_bracket) {
+        size_t seg_len = colon - operand - 1;
+        size_t off_len = end_bracket - colon - 1;
+
+        strncpy(segname, operand + 1, seg_len);
+        segname[seg_len] = '\0';
+
+        strncpy(regname, colon + 1, off_len);
+        regname[off_len] = '\0';
+    } else {
+        fprintf(stderr, "Erreur dans la recuperation des donnes\n");
+        return NULL;
+    }
+
+    Segment* seg = (Segment*)hashmap_get(cpu->memory_handler->allocated, segname);
+    int* reg = (int*)hashmap_get(cpu->context, regname);
+
+    if (!seg || !reg) {
+        fprintf(stderr, "Erreur dans la recuperation du segment et / ou registres\n");
+        return EXIT_FAILURE;
+    }
+
+    int address = (seg->start) + reg;
+    if (cpu->memory_handler->memory[address]){
+        return cpu->memory_handler->memory[address];
+    } else {
+        fprintf(stderr, "Erreur : L'adresse memoire specifie n'a pas pu etre trouve\n");
+        return NULL;
+    }
+
 }
+
+int find_free_address_strategy(MemoryHandler* handler, int size, int strategy) {
+    if (!handler || (size < 0) || (strategy < 0) || (strategy > 3)) {
+        fprintf(stderr, "Erreur dans les parametres\n");
+        return -1;
+    }
+
+    Segment* seg = NULL;
+    Segment* idx = handler->free_list;
+    Segment* tmpUn = NULL;
+    Segment* tmpDeux = NULL;
+
+    while (idx) {
+
+        if ((idx->size) >= size) {
+            if (strategy == 0) return idx->start;
+            if (strategy == 1) {
+                if (tmpUn) {
+                    if (idx->size < tmpUn->size) tmpUn = idx;
+                } else {
+                    tmpUn = idx;
+                }
+            }
+
+            if (strategy == 2) { 
+                if (tmpDeux) {
+                    if (idx->size > tmpDeux->size) tmpDeux = idx;
+                } else {
+                    tmpDeux = idx;
+                }
+            }
+        }
+    }
+
+    if (strategy == 1) return tmpUn->start;
+    if (strategy == 2) return tmpDeux->start; 
+    
+    return -1;
+}
+
+int alloc_es_segment(CPU* cpu) {
+    if (!cpu) {
+        fprintf(stderr, "Erreur dans les parametres\n");
+        return EXIT_FAILURE;
+    }
+
+    int* AX = (int*)hashmap_get(cpu->context, "AX");
+    if (!AX || (*AX) < 0) {
+        fprintf(stderr, "Erreur dans le registre AX\n");
+        return EXIT_FAILURE;
+    }
+    
+    int* BX = (int*)hashmap_get(cpu->context, "BX");
+    if (!BX || (*BX) < 0 || (*BX) > 2) {
+        fprintf(stderr, "Erreur dans le registre BX\n");
+        return EXIT_FAILURE;
+    }
+
+    int* ZF = (int*)hashmap_get(cpu->context, "ZF");
+    if (!ZF) {
+        fprintf(stderr, "Erreur dans le registre ZF\n");
+        return EXIT_FAILURE;
+    }
+
+    int start = find_free_address_strategy(cpu->memory_handler, (*AX), (*BX));
+    if (start == -1) {
+        fprintf(stderr, "Aucune segment valide a ete trouve\n");
+        *ZF = -1;
+        return EXIT_FAILURE;
+    }
+
+    if (!create_segment(cpu->memory_handler, "ES", start, (*AX))){
+        fprintf(stderr, "Erreur dans l'allocation d'un nouveau segment ES\n");
+        *ZF = -1;
+        return EXIT_FAILURE;
+    }
+
+    /* L'allocation a fonctionne */
+    *ZF = 0;
+
+    /* Initialisation avec des 0*/
+    for (int x=start; x < (start + (*AX)); x++) {
+        int* val = (int*)malloc(sizeof(int));
+        *val = 0;
+
+        cpu->memory_handler->memory[x] = (void*)val;
+    }
+
+    int* ES = (int*)hashmap_get(cpu->context, "ES");
+    if (!ES){
+        fprintf(stderr, "Erreur dans la recuperation du registre ES");
+        return EXIT_FAILURE;
+    }
+
+   /* MAJ du registre ES */
+    *ES = start;
+
+    return EXIT_SUCCESS;
+
+}
+
+
+
+
+int free_es_segment(CPU* cpu) {
+
+    int* AX = (int*)hashmap_get(cpu->context, "AX");
+    if (!AX || (*AX) < 0) {
+        fprintf(stderr, "Erreur dans le registre AX\n");
+        return EXIT_FAILURE;
+    }
+
+    int* ES = (int*)hashmap_get(cpu->context, "ES");
+    if (!ES) {
+        fprintf(stderr, "Erreur dans le registre ES\n");
+        return EXIT_FAILURE;
+    }
+    
+    for (int x=0; x < (*AX); x++) {
+        free(cpu->memory_handler->memory[x]);
+    }
+
+    *ES = -1;
+
+    return EXIT_SUCCESS;
+}
+
+
+
+
+
+
+
+    
+    
+
 
 
 
