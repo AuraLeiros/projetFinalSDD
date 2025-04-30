@@ -620,38 +620,88 @@ Instruction* fetch_next_instruction(CPU* cpu) {
     return res;
 }
 
-/* TODO TODO TODO */
-/* ADD YOUR FUNCTIONS PLEASE!!!!!!!!!! */
-/* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
 
 
-/* Manipulation de la pile */
+
+
+int run_program(CPU* cpu) {
+    if (!cpu) {
+        fprintf(stderr, "Erreur dans les parametres\n");
+        return EXIT_FAILURE;
+    }
+
+    Instruction* i = NULL;
+    char* usrInput = NULL;
+
+    /* Afficher l'etat initial */
+    affichageCPU(cpu);
+
+    /* Recuperer le segment de codes */
+    Segment* CS = (Segment*)hashmap_get(cpu->memory_handler->allocated, "CS");
+    if (!CS) {
+        fprintf(stderr, "Erreur dans la recuperation d'un segment de codes\n");
+        return EXIT_FAILURE;
+    }
+    
+    
+   /* Traitement des instructions */
+    do {
+
+        printf("Veuillez taper votre selection\t'[enter] : prochaine instruction\t'q' : exit\n");
+        usrInput = getchar();
+
+        if (usrInput == '\n') {
+
+            /* Recuperer la prochaine instruction*/
+            i = fetch_next_instruction(cpu);
+            if (!i) {
+                fprintf(stderr, "Erreur dans la lecture de la prochaine instruction\n");
+                return EXIT_FAILURE;
+            }
+
+            /* Executer l'instruction si elle existe*/
+            execute_instructions(cpu, i);
+
+        }
+
+    } while (usrInput != 'q');
+
+    /* Affichage du CPU en sortie */
+    affichageCPU(cpu);
+
+    return EXIT_SUCCESS;
+
+}
+
 int push_value(CPU* cpu, int value) {
     if (!cpu) {
       fprintf(stderr, "Erreur dans les parametres\n");
       return EXIT_FAILURE;
     }
+
     /* Chargement du registre SP qui contient le dernier indice rempli de la pile */
     int* SP = (int*)hashmap_get(cpu->context, "SP");
     if (!SP) {
       fprintf(stderr, "Erreur dans la lecture des registres\n");
       return EXIT_FAILURE;
     }
+
     /* Cas de depassement de la taille de la pile */
     if ((*SP) < 0){
       fprintf(stderr, "Stack underflow\n");
       return -1;
-    }
-    else if ((*SP) > SS_SIZE){
+    } else if ((*SP) > SS_SIZE){
       fprintf(stderr, "Stack overflow\n");
       return EXIT_FAILURE;
     }
+
     /* Nouveau pointeur vers la valeur a inserer*/
     int* val = (int*)malloc(sizeof(int));
     if (!val) {
       fprintf(stderr, "Erreur dans l'allocation d'un nouveau pointeur\n");
       return EXIT_FAILURE;
     }
+
     *val = value;
     /* Insertion du pointeur dans la memoire */
     if (store(cpu->memory_handler, "SS", *SP, (void*)val) != (void*)val){
@@ -675,23 +725,32 @@ int pop_value(CPU* cpu, int* dest){
      fprintf(stderr, "Erreur dans la lecture des registres\n");
      return EXIT_FAILURE;
   }
+
   /* Cas de depassement de la taille de la pile */
   if ((*SP) < 0){
       fprintf(stderr, "Stack underflow\n");
       return -1;
-  }
-  else if ((*SP) > SS_SIZE){
+  } else if ((*SP) > SS_SIZE){
       fprintf(stderr, "Stack overflow\n");
       return EXIT_FAILURE;
   }
+
   /* Chargement de la valeur au sommet de la pile */
   dest = (int*)load(cpu->memory_handler, "SS", (*SP));
+
   /* Nouvelle position du sommet de la pile */
   (*SP)++;
 
   return EXIT_SUCCESS;
 }
 
+
+void* segment_override_adressing(CPU* cpu, const char* operand) {
+    if (!cpu || !operand){
+        fprintf(stderr, "Erreur dans les parametres\n");
+        return NULL;
+    }
+}
 
 
 
@@ -843,4 +902,47 @@ int handle_POP(CPU* cpu, void* dest){
     }
 
     return push_value(cpu, *(int*)dest);
+}
+
+
+void affichageCPU(CPU* cpu) {
+    if (!cpu) {
+        fprintf(stderr, "Erreur dans la lecture d'un CPU\n");
+        return;
+    }
+
+    const char* reg[] = REGISTERS;
+
+    printf("Affichage des registres :\n\n");
+
+    for (int x=0; x < NUM_REGISTERS; x++){
+        int* val = (int*)hashmap_get(cpu->context, reg[x]);
+        if (!val) {
+            fprintf(stderr, "Erreur dans la lecture du registre %s\n", reg[x]);
+            return;
+        }
+
+        printf("Register : %s\tValue : %d\n", reg[x], *val);
+    }
+
+    printf("Affichage du segment de donnes :\n\n");
+
+    Segment* DS = (Segment*)hashmap_get(cpu->memory_handler->allocated, "DS");
+    if (!DS){
+        fprintf(stderr, "Le segment de donnes n'a pas ete retrouve\n");
+        return;
+    }
+
+    for (int x=0; x < (DS->size); x++){
+        Instruction* i = (Instruction*)cpu->memory_handler->memory[x];
+        if (i) {
+            printf("Instruction %d", x);
+            if (i->mnemonic) printf("%s ", i->mnemonic);
+            if (i->operand1) printf("%s ", i->operand1);
+            if (i->operand2) printf("%s\n", i->operand2);
+        }
+    }
+
+    return;
+
 }

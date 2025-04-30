@@ -69,7 +69,14 @@ void allocate_code_segment(CPU* cpu, Instruction** code_instructions, int code_c
 /* Effectuer des operations */
 int handle_instructions(CPU* cpu, Instruction* instr, void* src, void* dest);
 
+/* Execute une instruction */
 int execute_instructions(CPU* cpu, Instruction* instr);
+
+/* Reenvoie un pointeur vers la prochaine instruction dans CS */
+Instruction* fetch_next_instruction(CPU* cpu);
+
+/* Execute les instructions du CS et affiche l'etat du CPU dans le STDIN */
+int run_program(CPU* cpu);
 
 /* Manipulation de la pile */
 int push_value(CPU* cpu, int value);
@@ -95,6 +102,9 @@ int handle_HALT(CPU* cpu);
 int handle_PUSH(CPU* cpu, void* src);
 
 int handle_POP(CPU* cpu, void* dest);
+
+/* Affiche l'etat du CPU au instant T*/
+void affichageCPU(CPU* cpu);
 
 
 /* todo */
