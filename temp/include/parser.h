@@ -1,6 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include <string.h>
 #include "hachage.h"
 #include "macros.h"
 
@@ -36,7 +37,7 @@ void free_parser_result(ParserResult* p);
 char* trim(char* str);
 
 /* Pre-traitement d'une ligne de .CODE */
-int search_and_replace(char* str, HashMap* values);
+int search_and_replace(char** str, HashMap* values);
 
 /*------------------------*/
 /* Fonctions auxiliaires */
@@ -44,6 +45,9 @@ int search_and_replace(char* str, HashMap* values);
 
 /* Alloue et initialise une nouvelle instruction */
 Instruction* nouvelleInstruction(char* mnemonic, char* operand1, char* operand2);
+
+/* Alloue un nouveau parser */
+ParserResult* nouveauParser();
 
 /* Liberation de la memoire alloue a une instruction */
 void libererInstruction(Instruction* i);

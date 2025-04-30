@@ -1,8 +1,7 @@
 #ifndef MACROS_H
 #define MACROS_H
 
- /* Macros pour les fonctions de hachage */
-
+/* Macros pour les fonctions de hachage */
 #define TABLE_SIZE 128
 #define TOMBSTONE ((void*) - 1)
 #define ULONG_MAX 0xFFFFFFFFUL
@@ -15,5 +14,10 @@
 #define ASSEMBLER_MAX_BUFFER 512
 #define CONSTANTS_MAX_BUFFER 128 
 
+/* Macros pour les segments de cpu */
+#define REGISTERS {"AX", "BX", "CX", "DX", "IP", "ZF", "SF", "SP", "BP"}
+#define NUM_REGISTERS 9
+#define SS_START 0
+#define SS_SIZE 128
 
 #endif

@@ -26,9 +26,6 @@ Segment* find_free_segment(MemoryHandler* handler, int start, int size, Segment*
 /* Cree un nouveau segment et l'ajoute au HashMap allocated puis l'efface de la free_list */
 int create_segment(MemoryHandler* handler, const char* name, int start, int size);
 
-
-
-
 /* ------------------------ */
 /* - Fonctions auxiliaires -*/
 /* ------------------------ */
@@ -37,7 +34,7 @@ int create_segment(MemoryHandler* handler, const char* name, int start, int size
 void remove_memory_handler(MemoryHandler* mh);
 
 /* Liberation de la memoire d'une liste de segments */
-void free_liste_segment(Segment* s);
+void remove_free_list(Segment* s);
 
 /* Allocation et initialisation d'un nouveau Segment */
 Segment* nouveau_segment(int start, int size);
