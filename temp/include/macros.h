@@ -17,7 +17,6 @@
 /* Macros pour les segments de cpu */
 #define REGISTERS {"AX", "BX", "CX", "DX", "IP", "ZF", "SF", "SP", "BP"}
 #define NUM_REGISTERS 9
-#define SS_START 0
 #define SS_SIZE 128
 
 #endif

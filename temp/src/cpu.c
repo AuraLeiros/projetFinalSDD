@@ -62,11 +62,23 @@ CPU* cpu_init(int memory_size){
     cpu->context = contextHM;
     cpu->constant_pool = constant_pool;
 
+    /* On place la pile a la toute fin de la memoire */
+    int ss_start = cpu->memory_handler->total_size - SS_SIZE;
     /* Creation du segment de pile dans le memory_handler */
-    if (!create_segment(cpu->memory_handler, "SS", SS_START, SS_SIZE)) {
+    if (!create_segment(cpu->memory_handler, "SS", ss_start, SS_SIZE)) {
         fprintf(stderr, "Erreur dans la creation du stack segment.\n");
         goto erreur;
     }
+
+    /* Pointeurs de pile*/
+    int *SP = hashmap_get(cpu->context, "SP");
+    int *BP = hashmap_get(cpu->context, "BP");
+    if (!SP && !BP) {
+        fprintf(stderr, "Erreur dans l'initialisation des pointeurs de pile.\n");
+        goto erreur;
+    }
+    *SP = ss_start + SS_SIZE - 1;
+    *BP = *SP;
 
     return cpu;
 
