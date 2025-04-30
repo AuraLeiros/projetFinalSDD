@@ -29,7 +29,7 @@ HashMap* hashmap_create(){
         goto erreur;
     }
 
-    h->size = 0;
+    h->size = TABLE_SIZE;
 
     /* Allocation memoire et initialisation (a 0 / NULL) des elements du HashMap */
     h->table = (HashEntry*)calloc(TABLE_SIZE, sizeof(HashEntry));
