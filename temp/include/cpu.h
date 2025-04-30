@@ -83,6 +83,9 @@ int push_value(CPU* cpu, int value);
 
 int pop_value(CPU* cpu, int* dest);
 
+/* Retourne les donnees stockees dans la memoire supplementaire donne en parametre */
+void* segment_override_adressing(CPU* cpu, const char* operand);
+
 /*-------------------------*/
 /* Fonctions auxiliaires*/
 /*-------------------------*/
