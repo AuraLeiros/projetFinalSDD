@@ -15,8 +15,8 @@
 #define CONSTANTS_MAX_BUFFER 128 
 
 /* Macros pour les segments de cpu */
-#define REGISTERS {"AX", "BX", "CX", "DX", "IP", "ZF", "SF", "SP", "BP"}
-#define NUM_REGISTERS 9
+#define REGISTERS {"AX", "BX", "CX", "DX", "IP", "ZF", "SF", "SP", "BP", "ES"}
+#define NUM_REGISTERS 10
 #define SS_START 0
 #define SS_SIZE 128
 

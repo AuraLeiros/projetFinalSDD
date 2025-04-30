@@ -48,14 +48,22 @@ CPU* cpu_init(int memory_size){
             fprintf(stderr, "Erreur dans l'allocation memoire d'un val\n");
             goto erreur;
         }
-
-        *val = 0;
+        
+        if (strcmp(reg[x], "ES") == 0){
+            *val = -1;
+        } else {
+            *val = 0;
+        }
         
         if (!hashmap_insert(contextHM, reg[x], val)){
             fprintf(stderr, "Erreur dans l'insertion dans le HashMap\n");
             goto erreur;
         }
     }
+
+    /* Ajout du registre*/
+
+    /* Ajouter manuellement au */
 
     /* Relier les structures au CPU */
     cpu->memory_handler = mh;
@@ -836,8 +844,101 @@ int find_free_address_strategy(MemoryHandler* handler, int size, int strategy) {
     return -1;
 }
 
+int alloc_es_segment(CPU* cpu) {
+    if (!cpu) {
+        fprintf(stderr, "Erreur dans les parametres\n");
+        return EXIT_FAILURE;
+    }
+
+    int* AX = (int*)hashmap_get(cpu->context, "AX");
+    if (!AX || (*AX) < 0) {
+        fprintf(stderr, "Erreur dans le registre AX\n");
+        return EXIT_FAILURE;
+    }
+    
+    int* BX = (int*)hashmap_get(cpu->context, "BX");
+    if (!BX || (*BX) < 0 || (*BX) > 2) {
+        fprintf(stderr, "Erreur dans le registre BX\n");
+        return EXIT_FAILURE;
+    }
+
+    int* ZF = (int*)hashmap_get(cpu->context, "ZF");
+    if (!ZF) {
+        fprintf(stderr, "Erreur dans le registre ZF\n");
+        return EXIT_FAILURE;
+    }
+
+    int start = find_free_address_strategy(cpu->memory_handler, (*AX), (*BX));
+    if (start == -1) {
+        fprintf(stderr, "Aucune segment valide a ete trouve\n");
+        *ZF = -1;
+        return EXIT_FAILURE;
+    }
+
+    if (!create_segment(cpu->memory_handler, "ES", start, (*AX))){
+        fprintf(stderr, "Erreur dans l'allocation d'un nouveau segment ES\n");
+        *ZF = -1;
+        return EXIT_FAILURE;
+    }
+
+    /* L'allocation a fonctionne */
+    *ZF = 0;
+
+    /* Initialisation avec des 0*/
+    for (int x=start; x < (start + (*AX)); x++) {
+        int* val = (int*)malloc(sizeof(int));
+        *val = 0;
+
+        cpu->memory_handler->memory[x] = (void*)val;
+    }
+
+    int* ES = (int*)hashmap_get(cpu->context, "ES");
+    if (!ES){
+        fprintf(stderr, "Erreur dans la recuperation du registre ES");
+        return EXIT_FAILURE;
+    }
+
+   /* MAJ du registre ES */
+    *ES = start;
+
+    return EXIT_SUCCESS;
+
+}
 
 
+
+
+int free_es_segment(CPU* cpu) {
+
+    int* AX = (int*)hashmap_get(cpu->context, "AX");
+    if (!AX || (*AX) < 0) {
+        fprintf(stderr, "Erreur dans le registre AX\n");
+        return EXIT_FAILURE;
+    }
+
+    int* ES = (int*)hashmap_get(cpu->context, "ES");
+    if (!ES) {
+        fprintf(stderr, "Erreur dans le registre ES\n");
+        return EXIT_FAILURE;
+    }
+    
+    for (int x=0; x < (*AX); x++) {
+        free(cpu->memory_handler->memory[x]);
+    }
+
+    *ES = -1;
+
+    return EXIT_SUCCESS;
+}
+
+
+
+
+
+
+
+    
+    
 
 
 

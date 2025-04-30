@@ -86,6 +86,21 @@ int pop_value(CPU* cpu, int* dest);
 /* Retourne les donnees stockees dans la memoire supplementaire donne en parametre */
 void* segment_override_adressing(CPU* cpu, const char* operand);
 
+/* Finds the best free segment based on the selected strategy */
+int find_free_address_strategy(MemoryHandler* handler, int size, int strategy);
+
+/* Allocation d'un segment ES*/
+int alloc_es_segment(CPU* cpu);
+
+/* Liberation d'un segment ES */
+int free_es_segment(CPU* cpu);
+
+
+
+
+
+
+
 /*-------------------------*/
 /* Fonctions auxiliaires*/
 /*-------------------------*/
