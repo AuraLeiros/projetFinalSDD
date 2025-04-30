@@ -631,7 +631,7 @@ int run_program(CPU* cpu) {
     }
 
     Instruction* i = NULL;
-    char* usrInput = NULL;
+    char usrInput = ' ';
 
     /* Afficher l'etat initial */
     affichageCPU(cpu);
@@ -646,7 +646,6 @@ int run_program(CPU* cpu) {
     
    /* Traitement des instructions */
     do {
-
         printf("Veuillez taper votre selection\t'[enter] : prochaine instruction\t'q' : exit\n");
         usrInput = getchar();
 
